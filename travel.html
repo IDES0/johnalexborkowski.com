@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Travel · John Alexandre Borkowski</title>
+  <meta name="description" content="Places John Alexandre Borkowski has traveled.">
+  <link rel="canonical" href="https://johnalexborkowski.com/travel.html">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231f3a5f'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-size='30' fill='white'>JB</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fbfaf7;
+      --surface: #ffffff;
+      --text: #1b1d21;
+      --muted: #5d6470;
+      --faint: #8a909a;
+      --line: #e6e3dc;
+      --accent: #1f4f8a;
+      --accent-soft: #e8eef7;
+      --land: #e9e6df;
+      --visited: #9dbbe0;
+      --dot: #1f4f8a;
+      --home: #c2410c;
+      --serif: "Newsreader", Georgia, serif;
+      --sans: "Inter", system-ui, -apple-system, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111317;
+        --surface: #171a1f;
+        --text: #e7e9ec;
+        --muted: #a3a9b3;
+        --faint: #737a85;
+        --line: #262a31;
+        --accent: #7fb0ec;
+        --accent-soft: #1a2633;
+        --land: #22262d;
+        --visited: #2f5583;
+        --dot: #a9cdf7;
+        --home: #fb923c;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.65 var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+    .wide { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+    nav {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    nav .mark { font-family: var(--serif); font-size: 20px; color: var(--text); }
+    nav ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; }
+    nav ul a { color: var(--muted); font-size: 14px; }
+    nav ul a:hover { color: var(--text); text-decoration: none; }
+    nav ul a[aria-current] { color: var(--text); }
+
+    header { padding: 64px 0 28px; }
+    .eyebrow { font: 500 13px/1 var(--mono); color: var(--accent); letter-spacing: .02em; margin-bottom: 18px; }
+    h1 {
+      font-family: var(--serif); font-weight: 500;
+      font-size: clamp(36px, 6vw, 52px); line-height: 1.05;
+      letter-spacing: -0.02em; margin: 0 0 16px;
+    }
+    .lede { font-size: 17px; color: var(--muted); margin: 0; }
+
+    .stats { display: flex; gap: 32px; margin-top: 28px; flex-wrap: wrap; }
+    .stat b { display: block; font: 500 28px/1.1 var(--serif); }
+    .stat span { font: 12px/1 var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: .06em; }
+
+    .map-card {
+      position: relative;
+      margin: 12px 0 8px;
+      border: 1px solid var(--line); border-radius: 14px;
+      background: var(--surface); overflow: hidden;
+    }
+    #map { display: block; width: 100%; height: auto; cursor: grab; touch-action: none; }
+    #map:active { cursor: grabbing; }
+    .country { fill: var(--land); stroke: var(--surface); stroke-width: .5; }
+    .country.visited { fill: var(--visited); }
+    .route { fill: none; stroke: var(--dot); stroke-width: 1; stroke-dasharray: 3 3; opacity: .45; }
+    .route.active { opacity: 1; stroke-dasharray: none; stroke-width: 1.6; }
+    .routes.dim .route:not(.active) { opacity: .12; }
+    #arrow path { fill: var(--dot); }
+    .pin { fill: var(--dot); stroke: var(--surface); stroke-width: 1.2; cursor: pointer; }
+    .pin.home { fill: var(--home); }
+    .pin:hover, .pin.active { stroke: var(--text); stroke-width: 2; }
+
+    .tip {
+      position: absolute; pointer-events: none; opacity: 0;
+      background: var(--text); color: var(--bg);
+      font-size: 13px; line-height: 1.35; padding: 7px 10px; border-radius: 7px;
+      transform: translate(-50%, calc(-100% - 12px)); white-space: nowrap;
+      transition: opacity .12s;
+    }
+    .tip small { display: block; opacity: .7; font: 11px/1.4 var(--mono); }
+
+    .map-tools { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
+    .map-tools button {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--surface); color: var(--text);
+      font: 500 16px/1 var(--sans); cursor: pointer;
+    }
+    .map-tools button:hover { border-color: var(--accent); }
+    .legend { display: flex; gap: 18px; font-size: 13px; color: var(--muted); margin-bottom: 8px; flex-wrap: wrap; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+    section { padding: 40px 0; }
+    h2 {
+      font: 500 13px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em;
+      color: var(--faint); margin: 0 0 24px;
+    }
+    .year { margin-bottom: 32px; }
+    .year h3 { font: 500 22px/1 var(--serif); margin: 0 0 12px; }
+    .trip {
+      display: grid; grid-template-columns: 150px 1fr; gap: 24px;
+      padding: 12px 0; border-top: 1px solid var(--line); cursor: pointer;
+    }
+    .trip:hover .where { color: var(--accent); }
+    .when { font: 13px/1.6 var(--mono); color: var(--faint); padding-top: 2px; }
+    .where { font-weight: 600; }
+    .cities { color: var(--muted); font-size: 15px; }
+
+    footer { padding: 40px 0 56px; border-top: 1px solid var(--line); color: var(--faint); font-size: 14px; }
+    footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+    @media (max-width: 640px) {
+      nav ul { gap: 16px; }
+      nav ul li.hide-sm { display: none; }
+      header { padding: 44px 0 20px; }
+      .trip { grid-template-columns: 1fr; gap: 2px; }
+      .wrap, .wide { padding: 0 16px; }
+      .stats { gap: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="wrap">
+      <a class="mark" href="./">JB</a>
+      <ul>
+        <li class="hide-sm"><a href="./#experience">Experience</a></li>
+        <li class="hide-sm"><a href="./#projects">Projects</a></li>
+        <li><a href="./">Resume</a></li>
+        <li><a href="travel.html" aria-current="page">Travel</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <div class="wrap">
+      <header>
+        <div class="eyebrow">Travel</div>
+        <h1 id="yearTitle">Where I've been</h1>
+        <p class="lede" id="yearLede">A running map of trips over the last couple of years — internships, school breaks, and the time in between.</p>
+        <div class="stats" id="stats"></div>
+      </header>
+    </div>
+
+    <div class="wide">
+      <div class="legend">
+        <span><i style="background:var(--visited)"></i>Countries visited</span>
+        <span><i style="background:var(--dot)"></i>Places</span>
+        <span><i style="background:var(--home)"></i>Home base</span>
+      </div>
+      <div class="map-card" id="mapCard">
+        <svg id="map" role="img" aria-label="World map of places visited"></svg>
+        <div class="tip" id="tip"></div>
+        <div class="map-tools">
+          <button id="zoomIn" aria-label="Zoom in">+</button>
+          <button id="zoomOut" aria-label="Zoom out">−</button>
+          <button id="zoomReset" aria-label="Reset view">⟲</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <section>
+        <h2>Trips</h2>
+        <div id="trips"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>© 2026 John Alexandre Borkowski</span>
+      <a href="./">Back to resume</a>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+  <script>
+    // To add a trip: append an entry here. `country` must match the Natural Earth name.
+    const HOME = { name: "Austin, TX", lat: 30.2672, lon: -97.7431 };
+
+    // `from` is where the trip started: a place name from an earlier trip, or omitted for home.
+    // `back: true` draws a final leg home to Austin.
+    const TRIPS = [
+      { when: "May 2025", year: 2025, title: "French Polynesia", note: "Family sailing trip",
+        country: "French Polynesia",
+        places: [
+          { name: "Tahiti", lat: -17.5516, lon: -149.5585 },
+          { name: "Moorea", lat: -17.5388, lon: -149.8295 },
+          { name: "Raiatea", lat: -16.8333, lon: -151.4333 },
+          { name: "Bora Bora", lat: -16.5004, lon: -151.7415 } ] },
+      { when: "Jun – Aug 2025", year: 2025, title: "Nashville", note: "AllianceBernstein internship",
+        country: "United States of America",
+        places: [{ name: "Nashville, TN", lat: 36.1627, lon: -86.7816 }] },
+      { when: "Jun 2025", year: 2025, title: "Southern California", note: "Surf",
+        country: "United States of America", from: "Nashville, TN",
+        places: [
+          { name: "Beverly Hills", lat: 34.0736, lon: -118.4004 },
+          { name: "Manhattan Beach", lat: 33.8847, lon: -118.4109 },
+          { name: "Palos Verdes", lat: 33.7445, lon: -118.3870 } ] },
+      { when: "Jul 2025", year: 2025, title: "Québec", note: "Family",
+        country: "Canada", from: "Nashville, TN",
+        places: [{ name: "Québec City", lat: 46.8139, lon: -71.2080 }] },
+      { when: "Aug 2025", year: 2025, title: "Japan", note: "Post-internship",
+        country: "Japan", from: "Nashville, TN", back: true,
+        places: [
+          { name: "Tokyo", lat: 35.6762, lon: 139.6503 },
+          { name: "Minakami", lat: 36.6786, lon: 138.9989 },
+          { name: "Hakone", lat: 35.2324, lon: 139.1069 },
+          { name: "Kyoto", lat: 35.0116, lon: 135.7681 },
+          { name: "Hiroshima", lat: 34.3853, lon: 132.4553 },
+          { name: "Osaka", lat: 34.6937, lon: 135.5023 } ] },
+      { when: "Nov 2025", year: 2025, title: "Switzerland", note: "Quantum conference, paragliding, hiking, visiting my sister at ETH",
+        country: "Switzerland",
+        places: [{ name: "Zürich", lat: 47.3769, lon: 8.5417 }] },
+      { when: "Nov 2025", year: 2025, title: "Italy", note: "Thanksgiving break",
+        country: "Italy", from: "Zürich", back: true,
+        places: [{ name: "Lake Como", lat: 45.8081, lon: 9.0852 }] },
+      { when: "Dec 2025 – Jan 2026", year: 2025, title: "Argentina & Brazil", note: "Patagonia hiking, Iguazú Falls from both sides",
+        country: ["Argentina", "Brazil"],
+        places: [
+          { name: "Bariloche", lat: -41.1335, lon: -71.3103 },
+          { name: "Buenos Aires", lat: -34.6037, lon: -58.3816 },
+          { name: "Iguazú Falls", lat: -25.6953, lon: -54.4367 },
+          { name: "Foz do Iguaçu, Brazil", lat: -25.5469, lon: -54.5882 } ] },
+      { when: "Jan 2026", year: 2026, title: "Breckenridge", note: "Snowboarding",
+        country: "United States of America", from: "Foz do Iguaçu, Brazil", back: true,
+        places: [{ name: "Breckenridge, CO", lat: 39.4817, lon: -106.0384 }] },
+      { when: "Mar 2026", year: 2026, title: "El Salvador", note: "Spring break, surf",
+        country: "El Salvador", back: true,
+        places: [
+          { name: "El Tunco", lat: 13.4936, lon: -89.3833 },
+          { name: "Las Flores", lat: 13.1700, lon: -88.0900 } ] },
+      { when: "May 2026", year: 2026, title: "Japan", note: "Post-graduation",
+        country: "Japan",
+        places: [
+          { name: "Tokyo", lat: 35.6762, lon: 139.6503 },
+          { name: "Osaka", lat: 34.6937, lon: 135.5023 },
+          { name: "Kyoto", lat: 35.0116, lon: 135.7681 },
+          { name: "Nikkō", lat: 36.7199, lon: 139.6982 } ] },
+      { when: "May 2026", year: 2026, title: "Hawaii", note: "Surf",
+        country: "United States of America", from: "Tokyo",
+        places: [{ name: "Honolulu, HI", lat: 21.3069, lon: -157.8583 }] },
+      { when: "May – Jun 2026", year: 2026, title: "New York", note: "Goldman Sachs",
+        country: "United States of America", from: "Honolulu, HI",
+        places: [{ name: "New York, NY", lat: 40.7128, lon: -74.0060 }] },
+      { when: "Jun – Jul 2026", year: 2026, title: "West Palm Beach", note: "Goldman Sachs internship",
+        country: "United States of America", from: "New York, NY",
+        places: [{ name: "West Palm Beach, FL", lat: 26.7153, lon: -80.0534 }] },
+      { when: "Summer 2026", year: 2026, title: "Canada", note: "Family",
+        country: "Canada",
+        places: [
+          { name: "Québec City", lat: 46.8139, lon: -71.2080 },
+          { name: "Toronto", lat: 43.6532, lon: -79.3832 } ] },
+      { when: "Aug – Sep 2026", year: 2026, title: "Indonesia", note: "Surf",
+        country: "Indonesia", from: "Toronto",
+        places: [
+          { name: "Uluwatu, Bali", lat: -8.8290, lon: 115.0849 },
+          { name: "Nusa Lembongan", lat: -8.6735, lon: 115.4559 },
+          { name: "Kuta, Lombok", lat: -8.8948, lon: 116.2832 },
+          { name: "Mount Rinjani", lat: -8.4115, lon: 116.4577 },
+          { name: "Ubud, Bali", lat: -8.5069, lon: 115.2625 },
+          { name: "Canggu, Bali", lat: -8.6478, lon: 115.1385 },
+          { name: "Gili Islands", lat: -8.3500, lon: 116.0400 },
+          { name: "Komodo National Park", lat: -8.5500, lon: 119.4900 },
+          { name: "Labuan Bajo, Flores", lat: -8.4964, lon: 119.8877 } ] },
+    ];
+
+    const visited = new Set(TRIPS.flatMap(t => [].concat(t.country)));
+    const pins = TRIPS.flatMap(t => t.places.map(p => ({ ...p, trip: t })));
+
+    // Route legs: origin -> first stop, then stop -> stop within each trip
+    const legs = TRIPS.flatMap((t, i) => {
+      const origin = t.from
+        ? TRIPS.slice(0, i).flatMap(x => x.places).filter(p => p.name === t.from).pop() || HOME
+        : HOME;
+      const stops = [origin, ...t.places, ...(t.back ? [HOME] : [])];
+      return stops.slice(1).map((p, j) => ({ trip: t, a: stops[j], b: p }));
+    });
+
+    // Title: every country on the map, in the order first visited
+    const NAMES = { "United States of America": "the U.S." };
+    const allCountries = [...new Set(TRIPS.flatMap(t => [].concat(t.country)))].map(c => NAMES[c] || c);
+    const listText = allCountries.slice(0, -1).join(", ") + " and " + allCountries.at(-1);
+    document.getElementById("yearTitle").textContent = "Where I've been this past year or so";
+    document.getElementById("yearLede").textContent =
+      `${listText}. Internships, school breaks, and the time in between.`;
+
+    // Stats
+    const cities = new Set(pins.map(p => p.name));
+    document.getElementById("stats").innerHTML = [
+      [visited.size, "Countries"], [cities.size, "Places"], [TRIPS.length, "Trips"]
+    ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join("");
+
+    // Trip list, newest first
+    const tripsEl = document.getElementById("trips");
+    const byYear = d3.groups([...TRIPS].reverse(), t => t.year);
+    tripsEl.innerHTML = byYear.map(([year, ts]) => `
+      <div class="year"><h3>${year}</h3>
+        ${ts.map(t => `
+          <div class="trip" data-i="${TRIPS.indexOf(t)}">
+            <div class="when">${t.when}</div>
+            <div>
+              <div class="where">${t.title}${t.note ? ` <span class="cities">· ${t.note}</span>` : ""}</div>
+              <div class="cities">${t.places.map(p => p.name).join(" · ")}</div>
+            </div>
+          </div>`).join("")}
+      </div>`).join("");
+
+    // Map
+    const W = 1000, H = 520;
+    const svg = d3.select("#map").attr("viewBox", `0 0 ${W} ${H}`);
+    const g = svg.append("g");
+    const projection = d3.geoNaturalEarth1().scale(190).translate([W / 2, H / 2 + 20]);
+    const path = d3.geoPath(projection);
+    const tip = document.getElementById("tip");
+    const card = document.getElementById("mapCard");
+
+    let k = 1, activeTrip = null;
+    const zoom = d3.zoom().scaleExtent([1, 24])
+      .translateExtent([[0, 0], [W, H]])
+      .on("zoom", e => {
+        k = e.transform.k;
+        g.attr("transform", e.transform);
+        g.selectAll(".pin").attr("r", 4.5 / Math.sqrt(k)).attr("stroke-width", 1.2 / k);
+        g.selectAll(".country").attr("stroke-width", .5 / k);
+        g.selectAll(".route").attr("stroke-width", d => (activeTrip === d.trip ? 1.6 : 1) / k)
+          .attr("stroke-dasharray", `${3 / k} ${3 / k}`);
+      });
+    svg.call(zoom);
+
+    function showTip(evt, p) {
+      const r = card.getBoundingClientRect();
+      const label = p.trip ? `${p.name}<small>${p.trip.when}</small>` : `${p.name}<small>Home base</small>`;
+      tip.innerHTML = label;
+      tip.style.left = (evt.clientX - r.left) + "px";
+      tip.style.top = (evt.clientY - r.top) + "px";
+      tip.style.opacity = 1;
+    }
+    const hideTip = () => tip.style.opacity = 0;
+
+    function zoomToTrip(t) {
+      const pts = t.places.map(p => projection([p.lon, p.lat]));
+      const [x0, x1] = d3.extent(pts, d => d[0]), [y0, y1] = d3.extent(pts, d => d[1]);
+      const pad = 60;
+      const scale = Math.min(12, 0.9 / Math.max((x1 - x0 + pad) / W, (y1 - y0 + pad) / H));
+      const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+      svg.transition().duration(750).call(zoom.transform,
+        d3.zoomIdentity.translate(W / 2, H / 2).scale(scale).translate(-cx, -cy));
+      activeTrip = t;
+      g.selectAll(".pin").classed("active", d => d.trip === t);
+      g.select(".routes").classed("dim", true);
+      g.selectAll(".route").classed("active", d => d.trip === t);
+      document.getElementById("mapCard").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(world => {
+      const countries = topojson.feature(world, world.objects.countries).features
+        .filter(f => f.properties.name !== "Antarctica");
+
+      g.selectAll(".country").data(countries).join("path")
+        .attr("class", d => "country" + (visited.has(d.properties.name) ? " visited" : ""))
+        .attr("d", path);
+
+      svg.append("defs").append("marker")
+        .attr("id", "arrow").attr("viewBox", "0 0 10 10")
+        .attr("refX", 9).attr("refY", 5)
+        .attr("markerWidth", 7).attr("markerHeight", 7)
+        .attr("orient", "auto-start-reverse")
+        .append("path").attr("d", "M0,1 L9,5 L0,9 z");
+
+      g.append("g").attr("class", "routes").selectAll(".route").data(legs).join("path")
+        .attr("class", "route")
+        .attr("d", d => path({ type: "LineString", coordinates: [[d.a.lon, d.a.lat], [d.b.lon, d.b.lat]] }))
+        .attr("marker-end", "url(#arrow)");
+
+      g.selectAll(".pin").data([...pins, { ...HOME, home: true }]).join("circle")
+        .attr("class", d => "pin" + (d.home ? " home" : ""))
+        .attr("cx", d => projection([d.lon, d.lat])[0])
+        .attr("cy", d => projection([d.lon, d.lat])[1])
+        .attr("r", 4.5)
+        .on("mousemove", showTip)
+        .on("mouseleave", hideTip)
+        .on("click", (e, d) => d.trip && zoomToTrip(d.trip));
+    });
+
+    tripsEl.addEventListener("click", e => {
+      const el = e.target.closest(".trip");
+      if (el) zoomToTrip(TRIPS[+el.dataset.i]);
+    });
+    document.getElementById("zoomIn").onclick = () => svg.transition().call(zoom.scaleBy, 1.8);
+    document.getElementById("zoomOut").onclick = () => svg.transition().call(zoom.scaleBy, 1 / 1.8);
+    document.getElementById("zoomReset").onclick = () => {
+      svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity);
+      activeTrip = null;
+      g.selectAll(".pin").classed("active", false);
+      g.select(".routes").classed("dim", false);
+      g.selectAll(".route").classed("active", false);
+    };
+  </script>
+</body>
+</html>
