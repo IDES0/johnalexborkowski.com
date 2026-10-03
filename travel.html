@@ -338,7 +338,7 @@
             <div class="when">${t.when}</div>
             <div>
               <div class="where">${t.title}${t.note ? ` <span class="cities">· ${t.note}</span>` : ""}</div>
-              <div class="cities">${t.stops.map(p => p === HOME ? "Austin" : p.name).join(" → ")}</div>
+              <div class="cities">${t.stops.filter(p => p !== HOME).map(p => p.name).join(" → ")}</div>
             </div>
           </div>`).join("")}
       </div>`).join("");
