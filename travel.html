@@ -134,6 +134,10 @@
       padding: 12px 0; border-top: 1px solid var(--line); cursor: pointer;
     }
     .trip:hover .where { color: var(--accent); }
+    .trip.stay { cursor: default; padding: 8px 0; }
+    .trip.stay .where { font-weight: 500; color: var(--faint); }
+    .trip.stay .where::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--home); margin-right: 8px; vertical-align: 1px; }
+    .trip.stay:hover .where { color: var(--faint); }
     .when { font: 13px/1.6 var(--mono); color: var(--faint); padding-top: 2px; }
     .where { font-weight: 600; }
     .cities { color: var(--muted); font-size: 15px; }
@@ -215,7 +219,8 @@
 
     // `from` is where the trip started: a place name from an earlier trip, or omitted for home.
     // `back` draws a final return leg: `true` for home (Austin), or a place name like "Nashville, TN".
-    const TRIPS = [
+    // `stay: true` rows are time at a home base; they appear in the list only.
+    const ENTRIES = [
       { when: "May 2025", year: 2025, title: "French Polynesia", note: "Family sailing trip",
         country: "French Polynesia",
         places: [
@@ -223,7 +228,7 @@
           { name: "Moorea", lat: -17.5388, lon: -149.8295 },
           { name: "Raiatea", lat: -16.8333, lon: -151.4333 },
           { name: "Bora Bora", lat: -16.5004, lon: -151.7415 } ] },
-      { when: "Jun – Aug 2025", year: 2025, title: "Nashville", note: "AllianceBernstein internship",
+      { when: "Jun 2025", year: 2025, title: "Nashville", note: "AllianceBernstein internship",
         country: "United States of America",
         places: [{ name: "Nashville, TN", lat: 36.1627, lon: -86.7816 }] },
       { when: "Jun 2025", year: 2025, title: "Southern California", note: "Surf",
@@ -232,9 +237,11 @@
           { name: "Beverly Hills", lat: 34.0736, lon: -118.4004 },
           { name: "Manhattan Beach", lat: 33.8847, lon: -118.4109 },
           { name: "Palos Verdes", lat: 33.7445, lon: -118.3870 } ] },
+      { stay: true, title: "Nashville", when: "Jun – Jul 2025", year: 2025 },
       { when: "Jul 2025", year: 2025, title: "Québec", note: "Family",
         country: "Canada", from: "Nashville, TN", back: "Nashville, TN",
         places: [{ name: "Québec City", lat: 46.8139, lon: -71.2080 }] },
+      { stay: true, title: "Nashville", when: "Jul – Aug 2025", year: 2025 },
       { when: "Aug 2025", year: 2025, title: "Japan", note: "Post-internship",
         country: "Japan", from: "Nashville, TN", back: true,
         places: [
@@ -244,12 +251,14 @@
           { name: "Kyoto", lat: 35.0116, lon: 135.7681 },
           { name: "Hiroshima", lat: 34.3853, lon: 132.4553 },
           { name: "Osaka", lat: 34.6937, lon: 135.5023 } ] },
+      { stay: true, title: "Austin", when: "Aug – Nov 2025", year: 2025, note: "Fall semester" },
       { when: "Nov 2025", year: 2025, title: "Switzerland", note: "Quantum conference, paragliding, hiking, visiting my sister at ETH",
         country: "Switzerland",
         places: [{ name: "Zürich", lat: 47.3769, lon: 8.5417 }] },
       { when: "Nov 2025", year: 2025, title: "Italy", note: "Thanksgiving break",
         country: "Italy", from: "Zürich", back: true,
         places: [{ name: "Lake Como", lat: 45.8081, lon: 9.0852 }] },
+      { stay: true, title: "Austin", when: "Dec 2025", year: 2025 },
       { when: "Dec 2025 – Jan 2026", year: 2025, title: "Argentina & Brazil", note: "Patagonia hiking, Iguazú Falls from both sides",
         country: ["Argentina", "Brazil"],
         places: [
@@ -260,11 +269,13 @@
       { when: "Jan 2026", year: 2026, title: "Breckenridge", note: "Snowboarding",
         country: "United States of America", from: "Foz do Iguaçu, Brazil", back: true,
         places: [{ name: "Breckenridge, CO", lat: 39.4817, lon: -106.0384 }] },
+      { stay: true, title: "Austin", when: "Jan – Mar 2026", year: 2026, note: "Spring semester" },
       { when: "Mar 2026", year: 2026, title: "El Salvador", note: "Spring break, surf",
         country: "El Salvador", back: true,
         places: [
           { name: "El Tunco", lat: 13.4936, lon: -89.3833 },
           { name: "Las Flores", lat: 13.1700, lon: -88.0900 } ] },
+      { stay: true, title: "Austin", when: "Mar – May 2026", year: 2026, note: "Graduation" },
       { when: "May 2026", year: 2026, title: "Japan", note: "Post-graduation",
         country: "Japan",
         places: [
@@ -279,8 +290,9 @@
         country: "United States of America", from: "Honolulu, HI",
         places: [{ name: "New York, NY", lat: 40.7128, lon: -74.0060 }] },
       { when: "Jun – Jul 2026", year: 2026, title: "West Palm Beach", note: "Goldman Sachs internship",
-        country: "United States of America", from: "New York, NY",
+        country: "United States of America", from: "New York, NY", back: true,
         places: [{ name: "West Palm Beach, FL", lat: 26.7153, lon: -80.0534 }] },
+      { stay: true, title: "Austin", when: "Aug 2026", year: 2026 },
       { when: "Summer 2026", year: 2026, title: "Canada", note: "Family",
         country: "Canada",
         places: [
@@ -299,6 +311,7 @@
           { name: "Komodo National Park", lat: -8.5500, lon: 119.4900 },
           { name: "Labuan Bajo, Flores", lat: -8.4964, lon: 119.8877 } ] },
     ];
+    const TRIPS = ENTRIES.filter(e => !e.stay);
 
     const visited = new Set(TRIPS.flatMap(t => [].concat(t.country)));
     const pins = TRIPS.flatMap(t => t.places.map(p => ({ ...p, trip: t })));
@@ -330,10 +343,14 @@
 
     // Trip list, newest first
     const tripsEl = document.getElementById("trips");
-    const byYear = d3.groups([...TRIPS].reverse(), t => t.year);
+    const byYear = d3.groups([...ENTRIES].reverse(), t => t.year);
     tripsEl.innerHTML = byYear.map(([year, ts]) => `
       <div class="year"><h3>${year}</h3>
-        ${ts.map(t => `
+        ${ts.map(t => t.stay ? `
+          <div class="trip stay">
+            <div class="when">${t.when}</div>
+            <div><div class="where">${t.title}${t.note ? ` <span class="cities">· ${t.note}</span>` : ""}</div></div>
+          </div>` : `
           <div class="trip" data-i="${TRIPS.indexOf(t)}">
             <div class="when">${t.when}</div>
             <div>
@@ -421,7 +438,7 @@
     });
 
     tripsEl.addEventListener("click", e => {
-      const el = e.target.closest(".trip");
+      const el = e.target.closest(".trip:not(.stay)");
       if (el) zoomToTrip(TRIPS[+el.dataset.i]);
     });
     document.getElementById("zoomIn").onclick = () => svg.transition().call(zoom.scaleBy, 1.8);
