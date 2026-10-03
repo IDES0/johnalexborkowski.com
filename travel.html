@@ -214,7 +214,7 @@
     const HOME = { name: "Austin, TX", lat: 30.2672, lon: -97.7431 };
 
     // `from` is where the trip started: a place name from an earlier trip, or omitted for home.
-    // `back: true` draws a final leg home to Austin.
+    // `back` draws a final return leg: `true` for home (Austin), or a place name like "Nashville, TN".
     const TRIPS = [
       { when: "May 2025", year: 2025, title: "French Polynesia", note: "Family sailing trip",
         country: "French Polynesia",
@@ -227,13 +227,13 @@
         country: "United States of America",
         places: [{ name: "Nashville, TN", lat: 36.1627, lon: -86.7816 }] },
       { when: "Jun 2025", year: 2025, title: "Southern California", note: "Surf",
-        country: "United States of America", from: "Nashville, TN",
+        country: "United States of America", from: "Nashville, TN", back: "Nashville, TN",
         places: [
           { name: "Beverly Hills", lat: 34.0736, lon: -118.4004 },
           { name: "Manhattan Beach", lat: 33.8847, lon: -118.4109 },
           { name: "Palos Verdes", lat: 33.7445, lon: -118.3870 } ] },
       { when: "Jul 2025", year: 2025, title: "Québec", note: "Family",
-        country: "Canada", from: "Nashville, TN",
+        country: "Canada", from: "Nashville, TN", back: "Nashville, TN",
         places: [{ name: "Québec City", lat: 46.8139, lon: -71.2080 }] },
       { when: "Aug 2025", year: 2025, title: "Japan", note: "Post-internship",
         country: "Japan", from: "Nashville, TN", back: true,
@@ -305,10 +305,11 @@
 
     // Route legs: origin -> first stop, then stop -> stop within each trip
     const legs = TRIPS.flatMap((t, i) => {
-      const origin = t.from
-        ? TRIPS.slice(0, i).flatMap(x => x.places).filter(p => p.name === t.from).pop() || HOME
+      const find = name => typeof name === "string"
+        ? TRIPS.slice(0, i).flatMap(x => x.places).filter(p => p.name === name).pop() || HOME
         : HOME;
-      const stops = [origin, ...t.places, ...(t.back ? [HOME] : [])];
+      const origin = find(t.from);
+      const stops = [origin, ...t.places, ...(t.back ? [find(t.back)] : [])];
       return stops.slice(1).map((p, j) => ({ trip: t, a: stops[j], b: p }));
     });
 
