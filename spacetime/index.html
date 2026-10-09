@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Temporal-Spatial Transposition · John Alexandre Borkowski</title>
+  <meta name="description" content="Turn any video into a block of space-time and slice it along a different axis. Runs entirely in your browser.">
+  <meta property="og:title" content="Temporal-Spatial Transposition">
+  <meta property="og:description" content="Slice a video through time: motion turns into shape. Runs in your browser.">
+  <meta property="og:image" content="https://johnalexborkowski.com/img/og.jpg">
+  <link rel="canonical" href="https://johnalexborkowski.com/spacetime/">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231f3a5f'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-size='30' fill='white'>JB</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fbfaf7;
+      --surface: #ffffff;
+      --text: #1b1d21;
+      --muted: #5d6470;
+      --faint: #8a909a;
+      --line: #e6e3dc;
+      --accent: #1f4f8a;
+      --accent-soft: #e8eef7;
+      --error: #b42318;
+      --plane: #7c4dff;
+      --serif: "Newsreader", Georgia, serif;
+      --sans: "Inter", system-ui, -apple-system, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111317;
+        --surface: #171a1f;
+        --text: #e7e9ec;
+        --muted: #a3a9b3;
+        --faint: #737a85;
+        --line: #262a31;
+        --accent: #7fb0ec;
+        --accent-soft: #1a2633;
+        --error: #f97066;
+        --plane: #a98bff;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+    nav {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
+    }
+    nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    nav .mark { font-family: var(--serif); font-size: 20px; color: var(--text); }
+    nav ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; }
+    nav ul a { color: var(--muted); font-size: 14px; }
+    nav ul a:hover, nav ul a[aria-current] { color: var(--text); text-decoration: none; }
+
+    header { padding: 44px 0 20px; }
+    .eyebrow { font: 500 13px/1 var(--mono); color: var(--accent); margin-bottom: 14px; }
+    h1 { font: 500 clamp(32px, 5vw, 44px)/1.05 var(--serif); letter-spacing: -0.02em; margin: 0 0 12px; }
+    .lede { color: var(--muted); max-width: 680px; margin: 0; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; padding-bottom: 48px; }
+
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+    .label { font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 0 0 10px; }
+
+    .sources { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn {
+      font: 500 14px/1 var(--sans); padding: 10px 13px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--line); background: var(--surface); color: var(--text);
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn svg { width: 16px; height: 16px; }
+    .privacy { font-size: 13px; color: var(--faint); margin: 10px 0 0; }
+
+    .stage {
+      position: relative; background: #0b0c0f; border-radius: 12px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; min-height: 260px; aspect-ratio: 16 / 10;
+    }
+    .stage canvas { position: absolute; inset: 28px 28px 30px 32px; width: calc(100% - 60px); height: calc(100% - 58px); object-fit: contain; display: block; }
+    .overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px;
+      align-items: center; justify-content: center; text-align: center; padding: 24px; color: #e7e9ec;
+      background: rgba(11, 12, 15, .82); font-size: 15px;
+    }
+    .overlay[hidden] { display: none; }
+    .overlay small { color: #a3a9b3; font-size: 13px; max-width: 420px; }
+    .progress { width: min(320px, 80%); height: 6px; background: #262a31; border-radius: 3px; overflow: hidden; }
+    .progress i { display: block; height: 100%; width: 0; background: #7fb0ec; transition: width .1s; }
+    .axis { position: absolute; font: 500 12px/1 var(--mono); color: #a3a9b3; pointer-events: none; }
+    .axis.h { bottom: 8px; left: 50%; transform: translateX(-50%); }
+    .axis.v { left: 8px; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: left top; }
+
+    .views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 6px; }
+    .view { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; font: inherit; }
+    .view b { display: block; font: 600 14px/1.3 var(--mono); }
+    .view span { font-size: 12.5px; color: var(--muted); line-height: 1.35; display: block; margin-top: 3px; }
+    .view[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+    .view:disabled { opacity: .5; cursor: default; }
+
+    .controls { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin-top: 12px; }
+    .controls input[type=range] { width: 100%; accent-color: var(--accent); }
+    .readout { font: 13px var(--mono); color: var(--muted); white-space: nowrap; min-width: 92px; text-align: right; }
+    .fps { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+    .fps input { flex: 1; accent-color: var(--accent); }
+    .row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .msg { font-size: 14px; margin-top: 10px; min-height: 20px; color: var(--muted); }
+    .msg.error { color: var(--error); }
+
+    .cube svg { width: 100%; height: auto; display: block; }
+    .cube .edge { fill: none; stroke: var(--faint); stroke-width: 1.2; }
+    .cube .edge.back { stroke-dasharray: 3 3; opacity: .6; }
+    .cube .plane { fill: var(--plane); fill-opacity: .28; stroke: var(--plane); stroke-width: 1.5; }
+    .cube text { font: 11px var(--mono); fill: var(--muted); }
+    .side p { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
+    .side p b { color: var(--text); font-weight: 600; }
+    .dims { font: 13px var(--mono); color: var(--muted); }
+
+    footer { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--faint); font-size: 13px; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .wrap { padding: 0 16px; }
+      nav ul { gap: 16px; }
+      header { padding: 28px 0 14px; }
+      .views { grid-template-columns: 1fr; }
+      .view span { display: inline; margin-left: 6px; }
+      .view b { display: inline; }
+      .stage { aspect-ratio: 4 / 3; min-height: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="wrap">
+      <a class="mark" href="../">JB</a>
+      <ul>
+        <li><a href="../">Resume</a></li>
+        <li><a href="../travel.html">Travel</a></li>
+        <li><a href="./" aria-current="page">Spacetime</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="wrap">
+    <header>
+      <div class="eyebrow">Temporal-Spatial Transposition</div>
+      <h1>Slice a video through time</h1>
+      <p class="lede">A video is a block of pixels in (x, y, time). Play it normally and you see one moment at a time. Slice the same block along x or y instead, and time becomes a direction you can see: motion turns into shape. Pick an example, upload a clip, or record yourself.</p>
+    </header>
+
+    <div class="layout">
+      <div>
+        <div class="card">
+          <div class="label">Source</div>
+          <div class="sources">
+            <button class="btn" id="exOrbit">Example: orbiting dot</button>
+            <button class="btn" id="exWave">Example: travelling wave</button>
+            <button class="btn" id="exSalvador">Me surfing El Salvador</button>
+            <button class="btn" id="exWaco">Me surfing Waco</button>
+            <button class="btn" id="upload">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0l-4 4m4-4l4 4M5 20h14"/></svg>
+              Upload a video
+            </button>
+            <button class="btn" id="camera">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              Record 4 s with camera
+            </button>
+            <input type="file" id="file" accept="video/*,image/gif" hidden>
+          </div>
+          <p class="privacy">Everything runs on your device. Videos and camera footage never leave your browser.</p>
+        </div>
+
+        <div class="stage" id="stage">
+          <canvas id="canvas" width="320" height="200" aria-label="Current slice"></canvas>
+          <span class="axis h" id="axisH"></span>
+          <span class="axis v" id="axisV"></span>
+          <div class="overlay" id="overlay">
+            <div id="overlayText">Pick a source above to begin.</div>
+            <div class="progress" id="progress" hidden><i id="bar"></i></div>
+            <small id="overlaySub"></small>
+          </div>
+        </div>
+
+        <div class="views" id="views">
+          <button class="view" data-view="xyt" aria-pressed="false"><b>X-Y-T</b><span>Normal playback. Each frame is one moment.</span></button>
+          <button class="view" data-view="ytx" aria-pressed="false"><b>Y-T-X</b><span>One column of pixels across all of time, sweeping left to right.</span></button>
+          <button class="view" data-view="txy" aria-pressed="true"><b>T-X-Y</b><span>One row of pixels across all of time, sweeping top to bottom.</span></button>
+        </div>
+
+        <div class="controls">
+          <button class="btn" id="play" aria-label="Pause">
+            <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+          </button>
+          <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Slice position">
+          <span class="readout" id="readout">–</span>
+        </div>
+        <div class="fps">
+          <span>Speed</span>
+          <input type="range" id="fps" min="1" max="120" value="30" aria-label="Frames per second">
+          <span class="readout" id="fpsOut" style="min-width:56px">30 fps</span>
+        </div>
+        <div class="row-btns">
+          <button class="btn" id="export" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+            Export this view as GIF
+          </button>
+        </div>
+        <div class="msg" id="msg" role="status" aria-live="polite"></div>
+      </div>
+
+      <aside class="side">
+        <div class="card cube">
+          <div class="label">Where the slice is</div>
+          <svg id="cube" viewBox="0 0 260 200" role="img" aria-label="Space-time block with the current slicing plane"></svg>
+          <div class="dims" id="dims"></div>
+        </div>
+        <div class="card">
+          <div class="label">How it works</div>
+          <p>The clip is stacked into a 3D array, <b>frames × height × width</b>. Each view reads that same block along a different axis.</p>
+          <p><b>X-Y-T</b> fixes time: the normal video.</p>
+          <p><b>Y-T-X</b> fixes a column x, like a photo-finish camera. Time runs left to right: things moving up or down leave slanted streaks, and things crossing sideways get stretched or squashed by their speed.</p>
+          <p><b>T-X-Y</b> fixes a row y. Time runs top to bottom, so anything moving sideways leaves a streak whose slope is its speed: the travelling wave becomes diagonal stripes. The orbiting dot only shows up when it crosses the row, cutting the helix into points; sweep the row and they trace it out.</p>
+          <p style="margin:0">This is a browser port of my <a href="https://github.com/IDES0/Temporal-Spatial-Transposition" target="_blank" rel="noopener">Python tool</a>, which does the same with NumPy and OpenCV.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      Built with plain JavaScript and the Canvas API. GIF export by <a href="https://github.com/mattdesl/gifenc" target="_blank" rel="noopener">gifenc</a> (MIT).
+    </div>
+  </footer>
+
+  <script>
+    // The clip is held uncompressed (frames × height × width × 4 bytes), so the
+    // width is capped by device: 640 px (~220 MB for 240 frames) on computers,
+    // 360 px (~70 MB) on phones, tablets and low-memory devices. A mouse or
+    // trackpad as the primary pointer means a computer, whatever the window size.
+    const LARGE = matchMedia("(pointer: fine)").matches && (navigator.deviceMemory ?? 8) >= 4;
+    const MAX_W = LARGE ? 640 : 360;
+    const MAX_FRAMES = 240;     // and at most this many are kept (~8 s at 30 fps)
+    const CAPTURE_FPS = 30;
+    const CAMERA_SECONDS = 4;
+
+    const $ = id => document.getElementById(id);
+    const canvas = $("canvas"), ctx = canvas.getContext("2d");
+
+    // vol = { T, H, W, data: Uint8ClampedArray(T*H*W*4) }  -- frames × rows × cols × RGBA
+    let vol = null;
+    let view = "txy", pos = 0, playing = true, fps = 30;
+    let lastTick = 0, loading = false;
+
+    const VIEWS = {
+      xyt: { w: v => v.W, h: v => v.H, n: v => v.T, hAxis: "x →", vAxis: "y →", anim: "t" },
+      ytx: { w: v => v.T, h: v => v.H, n: v => v.W, hAxis: "time →", vAxis: "y →", anim: "x" },
+      txy: { w: v => v.W, h: v => v.T, n: v => v.H, hAxis: "x →", vAxis: "time →", anim: "y" },
+    };
+
+    // ── Slicing ───────────────────────────────────────────────────────────
+    function slice(k, out) {
+      const { T, H, W, data } = vol;
+      if (view === "xyt") {
+        out.set(data.subarray(k * H * W * 4, (k + 1) * H * W * 4));
+      } else if (view === "txy") {
+        // out(x, t) = vol[t][k][x]: one row per frame
+        for (let t = 0; t < T; t++) {
+          const src = (t * H + k) * W * 4;
+          out.set(data.subarray(src, src + W * 4), t * W * 4);
+        }
+      } else {
+        // out(t, y) = vol[t][y][k]: one column per frame, time left to right
+        const w = T;
+        for (let y = 0; y < H; y++) {
+          for (let t = 0; t < T; t++) {
+            const s = ((t * H + y) * W + k) * 4, d = (y * w + t) * 4;
+            out[d] = data[s]; out[d + 1] = data[s + 1]; out[d + 2] = data[s + 2]; out[d + 3] = 255;
+          }
+        }
+      }
+      return out;
+    }
+
+    let frameImg = null;
+    function draw() {
+      if (!vol) return;
+      const V = VIEWS[view], w = V.w(vol), h = V.h(vol);
+      if (canvas.width !== w || canvas.height !== h || !frameImg) {
+        canvas.width = w; canvas.height = h;
+        frameImg = ctx.createImageData(w, h);
+      }
+      slice(pos, frameImg.data);
+      ctx.putImageData(frameImg, 0, 0);
+      const n = V.n(vol);
+      $("scrub").max = n - 1;
+      $("scrub").value = pos;
+      $("readout").textContent = `${V.anim} = ${pos + 1} / ${n}`;
+      drawCube();
+    }
+
+    function loop(now) {
+      requestAnimationFrame(loop);
+      if (!vol || !playing || loading) return;
+      if (now - lastTick < 1000 / fps) return;
+      lastTick = now;
+      pos = (pos + 1) % VIEWS[view].n(vol);
+      draw();
+    }
+    requestAnimationFrame(loop);
+
+    // ── 3D preview of the slicing plane ───────────────────────────────────
+    function drawCube() {
+      const { T, H, W } = vol;
+      // Normalised box: width along x, height along y, depth along t.
+      const m = Math.max(W, H);
+      const bw = 120 * W / m, bh = 120 * H / m, bd = 70;
+      const ox = 40, oy = 60;
+      const P = (x, y, t) => [ox + x * bw + t * bd * 0.75, oy + y * bh - t * bd * 0.5];
+      const pt = p => p.map(v => v.toFixed(1)).join(",");
+      const poly = pts => `<polygon class="plane" points="${pts.map(pt).join(" ")}"/>`;
+      const line = (a, b, cls = "edge") => `<line class="${cls}" x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}"/>`;
+      const c = (x, y, t) => P(x, y, t);
+      let s = "";
+      // back edges (hidden)
+      s += line(c(0,1,0), c(0,1,1), "edge back") + line(c(0,1,1), c(1,1,1), "edge back") + line(c(0,1,1), c(0,0,1), "edge back");
+      // plane
+      const n = VIEWS[view].n(vol), f = n > 1 ? pos / (n - 1) : 0;
+      if (view === "xyt") s += poly([c(0,0,f), c(1,0,f), c(1,1,f), c(0,1,f)]);
+      if (view === "ytx") s += poly([c(f,0,0), c(f,0,1), c(f,1,1), c(f,1,0)]);
+      if (view === "txy") s += poly([c(0,f,0), c(1,f,0), c(1,f,1), c(0,f,1)]);
+      // front and top edges
+      s += line(c(0,0,0), c(1,0,0)) + line(c(1,0,0), c(1,1,0)) + line(c(1,1,0), c(0,1,0)) + line(c(0,1,0), c(0,0,0));
+      s += line(c(0,0,0), c(0,0,1)) + line(c(1,0,0), c(1,0,1)) + line(c(1,1,0), c(1,1,1));
+      s += line(c(0,0,1), c(1,0,1)) + line(c(1,0,1), c(1,1,1));
+      // axis labels
+      const lx = c(0.5, 1, 0), ly = c(0, 0.5, 0), lt = c(1, 1, 0.55);
+      s += `<text x="${lx[0]}" y="${lx[1] + 16}" text-anchor="middle">x</text>`;
+      s += `<text x="${ly[0] - 12}" y="${ly[1] + 4}" text-anchor="middle">y</text>`;
+      s += `<text x="${lt[0] + 12}" y="${lt[1] + 4}">time</text>`;
+      $("cube").innerHTML = s;
+      $("dims").textContent = `${T} frames × ${H} × ${W} px`;
+    }
+
+    // ── UI state ──────────────────────────────────────────────────────────
+    function setView(v) {
+      view = v;
+      for (const b of $("views").children) b.setAttribute("aria-pressed", b.dataset.view === v);
+      if (!vol) return;
+      pos = Math.floor(VIEWS[v].n(vol) / 2) % VIEWS[v].n(vol);
+      $("axisH").textContent = VIEWS[v].hAxis;
+      $("axisV").textContent = VIEWS[v].vAxis;
+      frameImg = null;
+      draw();
+    }
+
+    function setPlaying(p) {
+      playing = p;
+      $("play").setAttribute("aria-label", p ? "Pause" : "Play");
+      $("playIcon").innerHTML = p
+        ? '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>'
+        : '<path d="M7 4.5v15l13-7.5z"/>';
+    }
+
+    function overlay(text, sub = "", progress = null) {
+      $("overlay").hidden = text === null;
+      if (text === null) return;
+      $("overlayText").textContent = text;
+      $("overlaySub").textContent = sub;
+      $("progress").hidden = progress === null;
+      if (progress !== null) $("bar").style.width = `${Math.round(progress * 100)}%`;
+    }
+
+    function message(text, error = false) {
+      $("msg").textContent = text;
+      $("msg").className = "msg" + (error ? " error" : "");
+    }
+
+    function setSourceButton(id) {
+      for (const b of document.querySelectorAll(".sources .btn")) b.classList.toggle("on", b.id === id);
+    }
+
+    function useVolume(v, label) {
+      vol = v;
+      loading = false;
+      overlay(null);
+      $("export").disabled = false;
+      setView(view);
+      message(`${label}: ${v.T} frames at ${v.W}×${v.H}. Try each view, and drag the slider to move the slice.`);
+    }
+
+    function newVolume(T, H, W) {
+      return { T, H, W, data: new Uint8ClampedArray(T * H * W * 4) };
+    }
+
+    function fitSize(srcW, srcH) {
+      const W = Math.min(MAX_W, srcW);
+      return [W, Math.max(2, Math.round(srcH * W / srcW))];
+    }
+
+    // ── Sources ───────────────────────────────────────────────────────────
+    function example(kind) {
+      const T = 180, W = 320, H = 200;
+      const v = newVolume(T, H, W);
+      const c = new OffscreenCanvas(W, H), g = c.getContext("2d", { willReadFrequently: true });
+      for (let t = 0; t < T; t++) {
+        const phase = 2 * Math.PI * t / T;
+        if (kind === "orbit") {
+          // The notebook's helix: x = cos t, y = sin t, with time as the third axis.
+          const bg = g.createLinearGradient(0, 0, 0, H);
+          bg.addColorStop(0, "#14213d"); bg.addColorStop(1, "#0b0f1d");
+          g.fillStyle = bg; g.fillRect(0, 0, W, H);
+          g.strokeStyle = "rgba(255,255,255,.12)"; g.lineWidth = 1;
+          g.beginPath(); g.arc(W / 2, H / 2, 64, 0, 2 * Math.PI); g.stroke();
+          const angle = 2 * phase;  // two full orbits per clip
+          const x = W / 2 + 64 * Math.cos(angle), y = H / 2 + 64 * Math.sin(angle);
+          const dot = g.createRadialGradient(x - 4, y - 4, 2, x, y, 16);
+          dot.addColorStop(0, "#ffe08a"); dot.addColorStop(1, "#f08c2e");
+          g.fillStyle = dot; g.beginPath(); g.arc(x, y, 15, 0, 2 * Math.PI); g.fill();
+        } else {
+          // A travelling wave: crests move right at constant speed.
+          g.fillStyle = "#cfe6f5"; g.fillRect(0, 0, W, H);
+          const sea = g.createLinearGradient(0, H * 0.35, 0, H);
+          sea.addColorStop(0, "#2b7bb9"); sea.addColorStop(1, "#0b3554");
+          g.fillStyle = sea;
+          g.beginPath(); g.moveTo(0, H);
+          for (let x = 0; x <= W; x += 2) {
+            const y = H * 0.52 + 22 * Math.sin(2 * Math.PI * (x / 110 - 3 * t / T))
+                               + 7 * Math.sin(2 * Math.PI * (x / 41 + 2 * t / T));
+            g.lineTo(x, y);
+          }
+          g.lineTo(W, H); g.closePath(); g.fill();
+        }
+        v.data.set(g.getImageData(0, 0, W, H).data, t * H * W * 4);
+      }
+      return v;
+    }
+
+    async function fromVideoFile(file) {
+      const url = URL.createObjectURL(file);
+      try { return await fromVideo(url, file.name); } finally { URL.revokeObjectURL(url); }
+    }
+
+    // Sample frames from a video at `rate` per second (the clip's own rate for
+    // the built-in example, 30 for uploads), keeping at most MAX_FRAMES.
+    async function fromVideo(url, name, rate = CAPTURE_FPS) {
+      const video = document.createElement("video");
+      video.muted = true; video.playsInline = true; video.preload = "auto"; video.src = url;
+      try {
+        await new Promise((ok, fail) => {
+          video.onloadeddata = ok;
+          video.onerror = () => fail(new Error("Your browser can't decode this video. Try an MP4 (H.264) or WebM file."));
+        });
+        const dur = video.duration;
+        if (!isFinite(dur) || dur <= 0) throw new Error("Couldn't read the video's length.");
+        const [W, H] = fitSize(video.videoWidth, video.videoHeight);
+        const T = Math.max(2, Math.min(MAX_FRAMES, Math.round(dur * rate)));
+        const span = Math.min(dur, T / rate);
+        const v = newVolume(T, H, W);
+        const c = new OffscreenCanvas(W, H), g = c.getContext("2d", { willReadFrequently: true });
+        for (let t = 0; t < T; t++) {
+          video.currentTime = Math.min(dur - 0.001, (t + 0.5) * span / T);
+          await new Promise(ok => { video.onseeked = ok; setTimeout(ok, 1500); });
+          g.drawImage(video, 0, 0, W, H);
+          v.data.set(g.getImageData(0, 0, W, H).data, t * H * W * 4);
+          if (t % 4 === 0) overlay("Reading frames…", name, t / T);
+        }
+        if (dur > span + 0.05) setTimeout(() => message(`${$("msg").textContent} Used the first ${span.toFixed(0)} s of the video.`), 0);
+        return v;
+      } finally {
+        video.removeAttribute("src"); video.load();
+      }
+    }
+
+    async function fromGif(file) {
+      if (!("ImageDecoder" in window)) {
+        throw new Error("This browser can't read GIF frames. Try Chrome or Edge, or upload a video instead.");
+      }
+      const decoder = new ImageDecoder({ data: file.stream(), type: "image/gif" });
+      await decoder.tracks.ready;
+      const count = Math.min(MAX_FRAMES, decoder.tracks.selectedTrack.frameCount);
+      const first = (await decoder.decode({ frameIndex: 0 })).image;
+      const [W, H] = fitSize(first.displayWidth, first.displayHeight);
+      first.close();
+      const v = newVolume(count, H, W);
+      const c = new OffscreenCanvas(W, H), g = c.getContext("2d", { willReadFrequently: true });
+      for (let t = 0; t < count; t++) {
+        const { image } = await decoder.decode({ frameIndex: t });
+        g.drawImage(image, 0, 0, W, H);
+        image.close();
+        v.data.set(g.getImageData(0, 0, W, H).data, t * H * W * 4);
+        if (t % 4 === 0) overlay("Reading frames…", file.name, t / count);
+      }
+      decoder.close();
+      return v;
+    }
+
+    async function fromCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("This browser doesn't support camera access.");
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, facingMode: "user" }, audio: false });
+      const video = document.createElement("video");
+      video.muted = true; video.playsInline = true; video.srcObject = stream;
+      try {
+        await video.play();
+        await new Promise(ok => video.videoWidth ? ok() : (video.onloadedmetadata = ok));
+        const [W, H] = fitSize(video.videoWidth, video.videoHeight);
+        const T = CAMERA_SECONDS * CAPTURE_FPS;
+        const v = newVolume(T, H, W);
+        const c = new OffscreenCanvas(W, H), g = c.getContext("2d", { willReadFrequently: true });
+        for (let s = 3; s > 0; s--) { overlay(`Recording in ${s}…`, "Wave a hand, or move side to side."); await new Promise(r => setTimeout(r, 700)); }
+        const start = performance.now();
+        for (let t = 0; t < T; t++) {
+          const due = start + t * 1000 / CAPTURE_FPS;
+          const wait = due - performance.now();
+          if (wait > 0) await new Promise(r => setTimeout(r, wait));
+          // Mirror, so it behaves like a mirror while you record.
+          g.save(); g.translate(W, 0); g.scale(-1, 1); g.drawImage(video, 0, 0, W, H); g.restore();
+          v.data.set(g.getImageData(0, 0, W, H).data, t * H * W * 4);
+          if (t % 3 === 0) overlay("Recording…", `${((T - t) / CAPTURE_FPS).toFixed(1)} s left`, t / T);
+        }
+        return v;
+      } finally {
+        stream.getTracks().forEach(tr => tr.stop());
+      }
+    }
+
+    async function load(id, label, make) {
+      if (loading) return;
+      loading = true;
+      setSourceButton(id);
+      message("");
+      overlay("Loading…", "", 0);
+      try {
+        const v = await make();
+        useVolume(v, label);
+      } catch (err) {
+        loading = false;
+        console.error(err);
+        const text = err.name === "NotAllowedError" ? "Camera permission was denied." : (err.message || String(err));
+        overlay(vol ? null : "Pick a source above to begin.");
+        message(text, true);
+      }
+    }
+
+    // ── GIF export ────────────────────────────────────────────────────────
+    async function exportGif() {
+      if (!vol) return;
+      const btn = $("export");
+      btn.disabled = true;
+      const wasPlaying = playing;
+      setPlaying(false);
+      try {
+        message("Encoding GIF…");
+        const { GIFEncoder, quantize, applyPalette } = await import("https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js");
+        const V = VIEWS[view], w = V.w(vol), h = V.h(vol), n = V.n(vol);
+        const gif = GIFEncoder();
+        const buf = new Uint8ClampedArray(w * h * 4);
+        const delay = Math.max(20, Math.round(1000 / fps));  // browsers clamp faster GIFs anyway
+        for (let k = 0; k < n; k++) {
+          slice(k, buf);
+          const palette = quantize(buf, 256);
+          gif.writeFrame(applyPalette(buf, palette), w, h, { palette, delay });
+          if (k % 10 === 0) { message(`Encoding GIF… ${Math.round(100 * k / n)}%`); await new Promise(r => setTimeout(r, 0)); }
+        }
+        gif.finish();
+        const blob = new Blob([gif.bytes()], { type: "image/gif" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `spacetime-${view}.gif`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        message(`Exported ${n} frames (${(blob.size / 1048576).toFixed(1)} MB).`);
+      } catch (err) {
+        console.error(err);
+        message("Couldn't export the GIF: " + (err.message || err), true);
+      } finally {
+        btn.disabled = false;
+        setPlaying(wasPlaying);
+      }
+    }
+
+    // ── Wiring ────────────────────────────────────────────────────────────
+    // Built-in clips: encoded at 480 px with a keyframe every 15 frames, which
+    // makes reading them frame by frame about 6x faster than a normal encode.
+    const CLIPS = {
+      exSalvador: { file: "media/el-salvador.mp4", label: "Me surfing El Salvador", rate: 30, size: "840 KB" },
+      exWaco:     { file: "media/waco.mp4",       label: "Me surfing Waco",        rate: 30, size: "730 KB" },
+    };
+    // Download each clip whole and read it from memory: seeking then works the
+    // same as for an uploaded file, whatever the server's range-request support.
+    for (const [id, clip] of Object.entries(CLIPS)) {
+      $(id).onclick = () => load(id, clip.label, async () => {
+        overlay(`Loading “${clip.label}”…`, clip.size, 0);
+        const res = await fetch(clip.file);
+        if (!res.ok) throw new Error(`Couldn't load the clip (${res.status}).`);
+        const url = URL.createObjectURL(await res.blob());
+        try { return await fromVideo(url, clip.label, clip.rate); } finally { URL.revokeObjectURL(url); }
+      });
+    }
+    $("exOrbit").onclick = () => load("exOrbit", "Orbiting dot", async () => example("orbit"));
+    $("exWave").onclick = () => load("exWave", "Travelling wave", async () => example("wave"));
+    $("upload").onclick = () => $("file").click();
+    $("file").onchange = e => {
+      const file = e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      const isGif = file.type === "image/gif" || /\.gif$/i.test(file.name);
+      load("upload", file.name, () => isGif ? fromGif(file) : fromVideoFile(file));
+    };
+    $("camera").onclick = () => load("camera", "Camera recording", fromCamera);
+    $("views").onclick = e => { const b = e.target.closest(".view"); if (b) setView(b.dataset.view); };
+    $("play").onclick = () => setPlaying(!playing);
+    $("scrub").oninput = e => { pos = +e.target.value; setPlaying(false); draw(); };
+    $("fps").oninput = e => { fps = +e.target.value; $("fpsOut").textContent = `${fps} fps`; };
+    $("export").onclick = exportGif;
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey) return;
+      if (e.key === " ") { e.preventDefault(); setPlaying(!playing); }
+      if (e.key === "1") setView("xyt");
+      if (e.key === "2") setView("ytx");
+      if (e.key === "3") setView("txy");
+    });
+
+    // Start on the El Salvador clip so the page shows something straight away.
+    $("exSalvador").click();
+  </script>
+  <script data-goatcounter="https://johnalexborkowski.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
