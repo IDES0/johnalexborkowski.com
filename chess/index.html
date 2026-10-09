@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quantum Chess · John Alexandre Borkowski</title>
+  <meta name="description" content="Play Quantum Chess in your browser: pieces split into superposition, interfere when they merge, and collapse when measured.">
+  <meta property="og:title" content="Quantum Chess">
+  <meta property="og:description" content="Chess where pieces can be in two places at once. Runs entirely in your browser.">
+  <meta property="og:image" content="https://johnalexborkowski.com/img/og.jpg">
+  <link rel="canonical" href="https://johnalexborkowski.com/chess/">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231f3a5f'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-size='30' fill='white'>JB</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <style>
+    :root {
+      --bg: #fbfaf7;
+      --surface: #ffffff;
+      --text: #1b1d21;
+      --muted: #5d6470;
+      --faint: #8a909a;
+      --line: #e6e3dc;
+      --accent: #1f4f8a;
+      --accent-soft: #e8eef7;
+      --error: #b42318;
+      --good: #2e7d32;
+      --light-sq: #ede3d2;
+      --dark-sq: #b48a66;
+      --sel1: #f6d860;
+      --sel2: #8ec5f7;
+      --sel3: #a8e6a3;
+      --track: #7c4dff;
+      --serif: "Newsreader", Georgia, serif;
+      --sans: "Inter", system-ui, -apple-system, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111317;
+        --surface: #171a1f;
+        --text: #e7e9ec;
+        --muted: #a3a9b3;
+        --faint: #737a85;
+        --line: #262a31;
+        --accent: #7fb0ec;
+        --accent-soft: #1a2633;
+        --error: #f97066;
+        --good: #6fcf73;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+    nav {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
+    }
+    nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    nav .mark { font-family: var(--serif); font-size: 20px; color: var(--text); }
+    nav ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; }
+    nav ul a { color: var(--muted); font-size: 14px; }
+    nav ul a:hover, nav ul a[aria-current] { color: var(--text); text-decoration: none; }
+
+    header { padding: 44px 0 20px; }
+    .eyebrow { font: 500 13px/1 var(--mono); color: var(--accent); margin-bottom: 14px; }
+    h1 { font: 500 clamp(32px, 5vw, 44px)/1.05 var(--serif); letter-spacing: -0.02em; margin: 0 0 12px; }
+    .lede { color: var(--muted); max-width: 640px; margin: 0; }
+
+    .game { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 28px; align-items: start; padding-bottom: 48px; }
+
+    /* Toolbar */
+    .toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .tool {
+      font: 500 14px/1 var(--sans); padding: 9px 12px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    }
+    .tool kbd { font: 11px var(--mono); color: var(--faint); margin-left: 6px; }
+    .tool[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .tool[aria-pressed="true"] kbd { color: inherit; opacity: .7; }
+    .tool:disabled { opacity: .45; cursor: default; }
+    .hint { font-size: 14px; color: var(--muted); min-height: 22px; margin-bottom: 10px; }
+    .hint b { color: var(--text); font-weight: 600; }
+
+    /* Board */
+    .board-wrap { position: relative; }
+    .board {
+      container-type: inline-size;
+      display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+      width: 100%; aspect-ratio: 1; border-radius: 10px; overflow: hidden;
+      box-shadow: 0 1px 0 var(--line), 0 8px 24px rgba(0,0,0,.08);
+      user-select: none; -webkit-user-select: none;
+    }
+    .sq {
+      position: relative; border: 0; padding: 0; margin: 0; cursor: pointer; min-width: 0; min-height: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; gap: 0;
+      font: inherit; color: inherit; background: var(--light-sq);
+    }
+    .sq.dark { background: var(--dark-sq); }
+    .sq::before { content: ""; position: absolute; inset: 0; pointer-events: none; }
+    .sq.check::before { background: rgba(229, 115, 115, var(--check, .7)); }
+    .sq.sel1::before { background: color-mix(in srgb, var(--sel1) 80%, transparent); }
+    .sq.sel2::before { background: color-mix(in srgb, var(--sel2) 80%, transparent); }
+    .sq.sel3::before { background: color-mix(in srgb, var(--sel3) 80%, transparent); }
+    .sq.track::after { content: ""; position: absolute; inset: 2px; border: 3px solid var(--track); border-radius: 3px; pointer-events: none; }
+    .sq .dot { position: absolute; width: 26%; height: 26%; border-radius: 50%; background: rgba(40, 40, 60, .38); pointer-events: none; }
+    .sq .ring { position: absolute; inset: 6%; border-radius: 50%; border: 4px solid rgba(40, 40, 60, .38); pointer-events: none; }
+    .coord { position: absolute; font: 600 calc(100cqw / 8 * .15)/1 var(--sans); pointer-events: none; opacity: .75; }
+    .coord.rank { top: 4%; left: 5%; }
+    .coord.file { bottom: 4%; right: 6%; }
+    .sq.dark .coord { color: var(--light-sq); }
+    .sq:not(.dark) .coord { color: var(--dark-sq); }
+
+    .piece { position: relative; display: flex; flex-direction: column; align-items: center; line-height: 1; z-index: 1; }
+    .glyph { font-size: calc(100cqw / 8 * .7); line-height: 1; font-family: "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", sans-serif; }
+    .multi .glyph { font-size: calc(100cqw / 8 * .42); }
+    .glyph.w { color: #fbfbfb; text-shadow: 0 0 1px #111, 0 0 1px #111, 0 0 1px #111, 0 1px 2px rgba(0,0,0,.35); }
+    .glyph.b { color: #141414; text-shadow: 0 0 1px rgba(255,255,255,.35); }
+    .badge {
+      position: absolute; top: calc(100cqw / 8 * -.06); left: 50%; transform: translate(-50%, -40%);
+      font: 700 max(9px, calc(100cqw / 8 * .16))/1 var(--sans); padding: 2px 4px; border-radius: 4px; white-space: nowrap;
+      background: #fff; color: #26263a; border: 1px solid #26263a;
+    }
+    .badge.b { background: #26263a; color: #fff; }
+    .multi .badge { font-size: max(8px, calc(100cqw / 8 * .13)); }
+
+    .loading {
+      position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px;
+      align-items: center; justify-content: center; text-align: center; padding: 24px;
+      background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(3px);
+      border-radius: 10px; color: var(--text); font-size: 15px; z-index: 5;
+    }
+    .loading small { color: var(--muted); font-size: 13px; }
+    .spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin .9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .message { margin-top: 12px; font-size: 14px; min-height: 22px; white-space: pre-line; }
+    .message.error { color: var(--error); }
+    .message.note { color: var(--accent); }
+    .message.good { color: var(--good); }
+
+    /* Side panel */
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+    .status-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .turn { font: 500 22px/1.2 var(--serif); }
+    .check { font: 600 13px/1 var(--mono); color: var(--error); }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 6px; display: flex; gap: 14px; flex-wrap: wrap; }
+    .meta .warn { color: var(--error); }
+    .row-btns { display: flex; gap: 8px; margin-top: 12px; }
+    .btn { font: 500 13px/1 var(--sans); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+    .btn:hover { border-color: var(--accent); }
+
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: -4px -2px 12px; }
+    .tab { font: 500 13px/1 var(--sans); padding: 8px 10px; border: 0; background: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+    .panel { font-size: 14px; }
+    .panel h3 { font-size: 15px; margin: 0 0 4px; }
+    .panel .sub { color: var(--muted); margin: 0 0 10px; }
+    .panel .label { font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 14px 0 6px; }
+    .bar-row { display: grid; grid-template-columns: 70px 1fr 44px 18px; gap: 8px; align-items: center; margin: 4px 0; font-variant-numeric: tabular-nums; }
+    .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: var(--accent); }
+    .mono { font-family: var(--mono); font-size: 13px; }
+    .muted { color: var(--muted); }
+    .corr { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; }
+    .plist button { all: unset; display: grid; grid-template-columns: 1fr auto; gap: 10px; width: 100%; padding: 7px 0; border-top: 1px solid var(--line); cursor: pointer; }
+    .plist button:hover .pname { color: var(--accent); }
+    .state-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .state-table th, .state-table td { text-align: left; padding: 5px 6px; border-top: 1px solid var(--line); white-space: nowrap; }
+    .state-table th { font-weight: 500; color: var(--faint); border-top: 0; }
+    .state-scroll { overflow-x: auto; }
+    .ket {
+      background: var(--accent-soft); border-radius: 8px; padding: 14px 14px;
+      margin: 6px 0 8px; font-size: 15px; line-height: 2.7; overflow-x: auto; color: var(--text);
+    }
+    .ket .katex { font-size: 1.08em; }
+    .psi-card { margin-top: 14px; }
+    .psi-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; flex-wrap: wrap; }
+    .psi-head .label { white-space: nowrap; font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+    .ket.psi { margin-bottom: 0; min-height: 52px; }
+    .who-row { display: grid; grid-template-columns: 48px 1fr; gap: 8px; padding: 3px 0; }
+    .rules p { margin: 0 0 10px; color: var(--muted); }
+    .rules b { color: var(--text); }
+    .history { font: 13px/1.7 var(--mono); color: var(--muted); max-height: 220px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+    .history li.sub { padding-left: 1.5em; opacity: .85; }
+
+    footer { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--faint); font-size: 13px; }
+
+    @media (max-width: 880px) {
+      .game { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .wrap { padding: 0 16px; }
+      nav ul { gap: 16px; }
+      header { padding: 28px 0 14px; }
+      .tool { padding: 8px 9px; font-size: 13px; }
+      .tool kbd { display: none; }
+      .sq .ring { border-width: 3px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="wrap">
+      <a class="mark" href="../">JB</a>
+      <ul>
+        <li><a href="../">Resume</a></li>
+        <li><a href="../travel.html">Travel</a></li>
+        <li><a href="./" aria-current="page">Chess</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="wrap">
+    <header>
+      <div class="eyebrow">Quantum Chess</div>
+      <h1>Chess, in superposition</h1>
+      <p class="lede">Pieces can split into two places at once, interfere when they merge back, and collapse when measured. Two players share this device. The engine is <a href="https://github.com/IDES0/QuantumChess" target="_blank" rel="noopener">my Python code</a>, running entirely in your browser.</p>
+    </header>
+
+    <div class="game">
+      <div>
+        <div class="toolbar" id="toolbar" role="toolbar" aria-label="Action"></div>
+        <div class="hint" id="hint"></div>
+        <div class="board-wrap">
+          <div class="board" id="board" aria-label="Chess board"></div>
+          <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div id="loadingText">Loading the quantum engine…</div>
+            <small>About 10 MB the first time, cached after that.</small>
+          </div>
+        </div>
+        <div class="message" id="message" role="status" aria-live="polite"></div>
+        <div class="card psi-card">
+          <div class="psi-head"><span class="label">Quantum state</span><span class="muted" id="psiTitle"></span></div>
+          <div class="ket psi" id="psi"></div>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card">
+          <div class="status-top">
+            <div class="turn" id="turn">White to move</div>
+            <div class="check" id="check"></div>
+          </div>
+          <div class="meta" id="meta"></div>
+          <div class="row-btns">
+            <button class="btn" id="newGame">New game</button>
+            <button class="btn" id="cancel">Cancel selection (Esc)</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="tabs" role="tablist" id="tabs">
+            <button class="tab" role="tab" data-tab="piece" aria-selected="true">Piece</button>
+            <button class="tab" role="tab" data-tab="square">Square</button>
+            <button class="tab" role="tab" data-tab="pieces">Pieces</button>
+            <button class="tab" role="tab" data-tab="state">State</button>
+            <button class="tab" role="tab" data-tab="rules">Rules</button>
+          </div>
+          <div class="panel" id="panel"></div>
+        </div>
+
+        <div class="card">
+          <div class="panel"><div class="label" style="margin-top:0">History</div></div>
+          <ol class="history" id="history"></ol>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      Engine: <a href="https://github.com/IDES0/QuantumChess" target="_blank" rel="noopener">QuantumChess</a> (Python),
+      run in the browser with <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a>.
+      Move generation by <a href="https://github.com/niklasf/python-chess" target="_blank" rel="noopener">python-chess</a> (GPL-3.0).
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js"></script>
+  <script>
+    const ACTIONS = [
+      { key: "move",    label: "Move",      kbd: "m", hints: ["Click one of your pieces.", "Click where it should go."] },
+      { key: "split",   label: "Split",     kbd: "s", hints: ["Click one of your pieces.", "Click the first destination.", "Click the second destination."] },
+      { key: "merge",   label: "Merge",     kbd: "g", hints: ["Click the first half of a split piece (a failed merge lands here).", "Click the second half.", "Click the empty target square."] },
+      { key: "measure", label: "Measure",   kbd: "x", hints: ["Click a square whose contents are uncertain to measure it (uses your turn)."] },
+      { key: "phase",   label: "Phase ×−1", kbd: "p", hints: ["Click one of your superposed pieces to flip its phase (free, once per turn)."] },
+      { key: "inspect", label: "Inspect",   kbd: "i", hints: ["Click any square to inspect it and the piece on it."] },
+    ];
+    const BY_KEY = Object.fromEntries(ACTIONS.map(a => [a.key, a]));
+    const GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
+    const FILES = "abcdefgh";
+    const pct = p => `${Math.round(p * 100)}%`;
+    const $ = id => document.getElementById(id);
+
+    let B = null;                 // the Python bridge module
+    let view = null;              // last view() from Python
+    let action = "move", mainAction = "move";
+    let clicks = [], targets = [];
+    let inspectedPid = null, inspectedSquare = null, tab = "piece";
+    let history = [], turnNumber = 1;
+    let busy = false;
+    const HEAVY = 512;  // above this many branches, show "Computing…" first
+
+    // Run fn now, or after painting a "Computing…" message when the state is large.
+    function heavy(fn) {
+      if (!view || view.branches < HEAVY) { fn(); return; }
+      busy = true;
+      setMessage(`Computing… (${view.branches.toLocaleString()} positions in superposition)`, "note");
+      // Clicks made during the computation queue up behind it; releasing the
+      // guard one task later lets them arrive while busy is still set, so
+      // they are dropped instead of replayed.
+      requestAnimationFrame(() => setTimeout(() => {
+        try { fn(); } finally { setTimeout(() => { busy = false; }, 50); }
+      }, 0));
+    }
+
+    // ── Python ──────────────────────────────────────────────────────────────
+    async function boot() {
+      const step = t => $("loadingText").textContent = t;
+      try {
+        step("Downloading Python (Pyodide)…");
+        const py = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.29.5/full/" });
+        step("Installing python-chess…");
+        await py.loadPackage("micropip");
+        const wheel = new URL("vendor/chess-1.11.2-py3-none-any.whl", location.href).href;
+        await py.pyimport("micropip").install(wheel);
+        step("Starting the engine…");
+        for (const f of ["quantum_chess.py", "bridge.py"]) {
+          const res = await fetch(f, { cache: "no-cache" });
+          if (!res.ok) throw new Error(`Couldn't load ${f} (${res.status})`);
+          py.FS.writeFile(`/home/pyodide/${f}`, await res.text());
+        }
+        py.runPython("import sys; sys.path.insert(0, '/home/pyodide')");
+        B = py.pyimport("bridge");
+        $("loading").remove();
+        refresh();
+        setMessage("White to move. Pick an action above, then click the board.", "note");
+      } catch (err) {
+        console.error(err);
+        $("loading").innerHTML = `<div>Couldn't start the engine.</div><small>${String(err.message || err)}</small>`;
+      }
+    }
+
+    const call = s => JSON.parse(s);
+
+    // Typeset with KaTeX; inline mode so long sums wrap at the + signs.
+    function tex(el, latex) {
+      if (!el) return;
+      if (window.katex) katex.render("\\displaystyle " + latex, el, { throwOnError: false });
+      else el.textContent = latex;
+    }
+
+    function refresh() {
+      view = call(B.view(inspectedPid, inspectedSquare));
+      render();
+    }
+
+    // ── Board ───────────────────────────────────────────────────────────────
+    function buildBoard() {
+      const board = $("board");
+      for (let rank = 7; rank >= 0; rank--) {
+        for (let file = 0; file < 8; file++) {
+          const name = FILES[file] + (rank + 1);
+          const el = document.createElement("button");
+          el.className = "sq" + ((file + rank) % 2 === 0 ? " dark" : "");
+          el.dataset.sq = name;
+          el.addEventListener("click", () => onSquare(name));
+          board.appendChild(el);
+        }
+      }
+    }
+
+    function pieceHTML(entries) {
+      const multi = entries.length > 1;
+      return entries.map(e => {
+        const white = e.s === e.s.toUpperCase();
+        const glyph = GLYPH[e.s.toLowerCase()] + "︎";
+        const certain = e.p > 0.999;
+        const opacity = certain ? 1 : 0.4 + 0.6 * e.p;
+        const badge = certain ? "" :
+          `<span class="badge ${white ? "" : "b"}">${e.neg ? "−" : ""}${pct(e.p)}</span>`;
+        return `<span class="piece ${multi ? "multi" : ""}">${badge}<span class="glyph ${white ? "w" : "b"}" style="opacity:${opacity}">${glyph}</span></span>`;
+      }).join("");
+    }
+
+    function renderBoard() {
+      const tracked = new Set(view.inspected ? view.inspected.squares : []);
+      const targetMap = new Map(targets.map(t => [t.sq, t.occupied]));
+      for (const el of $("board").children) {
+        const sq = el.dataset.sq;
+        const entries = view.squares[sq] || [];
+        const cls = ["sq"];
+        if (el.classList.contains("dark")) cls.push("dark");
+        const ci = clicks.indexOf(sq);
+        if (ci >= 0) cls.push("sel" + (ci + 1));
+        if (view.check[sq]) cls.push("check");
+        if (tracked.has(sq)) cls.push("track");
+        el.className = cls.join(" ");
+        el.style.setProperty("--check", view.check[sq] ? (0.25 + 0.55 * view.check[sq]).toFixed(2) : "");
+
+        let html = "";
+        if (sq[0] === "a") html += `<span class="coord rank">${sq[1]}</span>`;
+        if (sq[1] === "1") html += `<span class="coord file">${sq[0]}</span>`;
+        if (targetMap.has(sq) && ci < 0) html += targetMap.get(sq) ? `<span class="ring"></span>` : `<span class="dot"></span>`;
+        if (entries.length) html += `<span style="display:flex;gap:2%;align-items:center;justify-content:center;width:100%">${pieceHTML(entries)}</span>`;
+        el.innerHTML = html;
+
+        const label = entries.length
+          ? entries.map(e => `${e.s === e.s.toUpperCase() ? "White" : "Black"} ${({k:"king",q:"queen",r:"rook",b:"bishop",n:"knight",p:"pawn"})[e.s.toLowerCase()]} ${pct(e.p)}`).join(", ")
+          : "empty";
+        el.setAttribute("aria-label", `${sq}: ${label}`);
+      }
+    }
+
+    // ── Toolbar, status, panels ─────────────────────────────────────────────
+    function renderToolbar() {
+      $("toolbar").innerHTML = ACTIONS.map(a => {
+        const disabled = (a.key === "phase" && view && !view.canPhase) || (view && view.result && a.key !== "inspect");
+        return `<button class="tool" data-action="${a.key}" aria-pressed="${a.key === action}" ${disabled ? "disabled" : ""}>${a.label}<kbd>${a.kbd}</kbd></button>`;
+      }).join("");
+      const hints = BY_KEY[action].hints;
+      const step = hints[clicks.length] || "";
+      const n = hints.length > 1 ? `<b>Step ${clicks.length + 1}/${hints.length}:</b> ` : "";
+      $("hint").innerHTML = view && view.result ? "The game is over. Start a new game to play again." : n + step;
+    }
+
+    function renderStatus() {
+      if (view.result) {
+        $("turn").textContent = `${view.result.winner} wins`;
+        $("check").textContent = "CHECKMATE";
+      } else {
+        $("turn").textContent = `${view.turn} to move`;
+        const c = view.checkTotal;
+        $("check").textContent = c > 0.999 ? "CHECK" : c > 1e-9 ? `QUANTUM CHECK ${pct(c)}` : "";
+      }
+      const near = view.branches > view.maxBranches / 2;
+      $("meta").innerHTML = [
+        `<span class="${near ? "warn" : ""}">${view.branches === 1 ? "1 position (classical)" : `Superposition of ${view.branches} positions`}${near ? ` · limit ${view.maxBranches}` : ""}</span>`,
+        view.result ? "" : `<span>Phase shift ${view.canPhase ? "available" : "used this turn"}</span>`,
+      ].join("");
+    }
+
+    function bars(where, withPhase) {
+      return where.map(w => `
+        <div class="bar-row"><span class="mono">${w.loc}</span>
+          <span class="bar"><i style="width:${(w.p * 100).toFixed(1)}%"></i></span>
+          <span class="mono">${pct(w.p)}</span><span class="mono muted">${withPhase ? (w.phase || "") : ""}</span></div>`).join("");
+    }
+
+    function renderPanel() {
+      for (const t of $("tabs").children) t.setAttribute("aria-selected", t.dataset.tab === tab);
+      const el = $("panel");
+      if (tab === "piece") {
+        const p = view.inspected;
+        if (!p) {
+          el.innerHTML = `<h3>No piece selected</h3><p class="sub">Click a piece on the board (with any action) to see where it may be and which pieces its fate is tied to.</p>`;
+          return;
+        }
+        let html = `<h3>${p.name}</h3><p class="sub">${p.quantum ? "In superposition" : "Classical"}${p.alive < 0.999 ? ` · on the board ${pct(p.alive)} of the time` : ""}</p>
+          <div class="label">Where it may be</div>${bars(p.where, p.quantum)}`;
+        if (p.correlations.length) {
+          html += `<div class="label">Entangled with</div>`;
+          for (const c of p.correlations) {
+            html += `<div class="corr"><b>${c.name}</b> <span class="muted mono">${c.bits.toFixed(2)} bits</span>`;
+            for (const g of c.given) {
+              html += `<div class="muted" style="margin-top:4px">If this piece is on <span class="mono">${g.loc}</span>: ${g.then.map(t => `<span class="mono">${t.loc}</span> ${pct(t.p)}`).join(", ")}</div>`;
+            }
+            html += `</div>`;
+          }
+        } else if (p.quantum) {
+          html += `<p class="muted" style="margin-top:12px">Not entangled with any other piece.</p>`;
+        }
+        el.innerHTML = html;
+      } else if (tab === "square") {
+        const q = view.square;
+        if (!q) {
+          el.innerHTML = `<h3>No square selected</h3><p class="sub">Click any square to see its quantum state: which pieces may be there, with what amplitude.</p>`;
+          return;
+        }
+        el.innerHTML = `<h3>State of square ${q.square.toUpperCase()}</h3><div class="ket" id="ket"></div>
+          <p class="sub mono">P(occupied) = ${q.occupied.toFixed(3)} · P(empty) = ${q.empty.toFixed(3)}</p>
+          <div class="label">Who may be here</div>` +
+          q.who.map(w => `<div class="who-row"><span class="mono">${pct(w.p)}</span><span>${w.name}</span></div>`).join("") +
+          (q.empty > 1e-9 ? `<div class="who-row"><span class="mono">${pct(q.empty)}</span><span class="muted">empty</span></div>` : "") +
+          `<p class="muted" style="margin-top:10px;font-size:13px">Coefficients are √P for each outcome, signed by phase when every branch with that outcome shares it.</p>`;
+        tex($("ket"), q.latex);
+      } else if (tab === "pieces") {
+        if (!view.pieces.length) {
+          el.innerHTML = `<p class="sub">Every piece is on one square with certainty. Split one to start a superposition.</p>`;
+          return;
+        }
+        el.innerHTML = `<p class="sub">Pieces in superposition or possibly captured.</p><div class="plist">` +
+          view.pieces.map(p => `<button data-pid="${p.pid}"><span><span class="pname">${p.name}</span><br><span class="muted mono">${p.where.map(w => `${w.loc} ${pct(w.p)}`).join(" · ")}</span></span><span class="mono muted">${pct(p.alive)}</span></button>`).join("") + `</div>`;
+      } else if (tab === "state") {
+        const s = view.state;
+        const head = `<h3>${s.title}</h3><div class="ket" id="ket"></div><p class="sub">${s.subtitle}</p>`;
+        if (!s.pieces.length) {
+          el.innerHTML = head;
+          tex($("ket"), s.latex);
+          return;
+        }
+        el.innerHTML = head + `<div class="label">Branches</div><p class="sub">Each row is one chess position in the superposition. Columns show where each quantum piece is in that position.</p>
+          <div class="state-scroll"><table class="state-table"><thead><tr><th>Amplitude</th><th>P</th>${s.pieces.map(n => `<th>${n.replace(/^(White|Black) /, "").replace(/\s\(/, "<br>(")}</th>`).join("")}</tr></thead><tbody>` +
+          s.rows.map(r => `<tr><td class="mono">${r.amp}</td><td class="mono">${pct(r.p)}</td>${r.locs.map(l => `<td class="mono">${l}</td>`).join("")}</tr>`).join("") +
+          `</tbody></table></div>${s.hidden ? `<p class="muted" style="margin-top:8px">…and ${s.hidden} more positions.</p>` : ""}`;
+        tex($("ket"), s.latex);
+      } else {
+        el.innerHTML = RULES;
+      }
+    }
+
+    function renderHistory() {
+      $("history").innerHTML = history.map(h => `<li class="${h.sub ? "sub" : ""}">${h.text}</li>`).join("");
+      $("history").scrollTop = $("history").scrollHeight;
+    }
+
+    let lastPsi = null;
+    function renderPsi() {
+      const s = view.state;
+      $("psiTitle").textContent = s.pieces.length
+        ? `${s.title} · ${s.pieces.length} piece${s.pieces.length > 1 ? "s" : ""} in superposition`
+        : "classical";
+      if (s.latex !== lastPsi) { tex($("psi"), s.latex); lastPsi = s.latex; }
+    }
+
+    function render() {
+      renderPsi();
+      renderToolbar();
+      renderBoard();
+      renderStatus();
+      renderPanel();
+      renderHistory();
+    }
+
+    function setMessage(text, kind) {
+      const m = $("message");
+      m.textContent = text;
+      m.className = "message " + (kind || "");
+    }
+
+    // ── Interaction ─────────────────────────────────────────────────────────
+    function setAction(key) {
+      if (!BY_KEY[key]) return;
+      action = key;
+      if (key !== "phase") mainAction = key;
+      clicks = []; targets = [];
+      if (view) render();
+    }
+
+    function onSquare(sq) {
+      if (!B || busy) return;
+      heavy(() => handleSquare(sq));
+    }
+
+    function handleSquare(sq) {
+      // Clicking a square always inspects it.
+      const pid = B.piece_on(sq);
+      if (pid !== undefined && pid !== null) inspectedPid = pid;
+      inspectedSquare = sq;
+      if (action === "inspect") { tab = pid ? "piece" : "square"; refresh(); return; }
+      if (view.result) { refresh(); return; }
+
+      const i = clicks.indexOf(sq);
+      if (i >= 0) {
+        clicks = clicks.slice(0, i);
+        if (!clicks.length) targets = [];
+        refresh();
+        return;
+      }
+      clicks.push(sq);
+      if ((action === "move" || action === "split") && clicks.length === 1) {
+        targets = call(B.legal_targets(sq));
+      }
+      if (clicks.length < BY_KEY[action].hints.length) { refresh(); return; }
+
+      const [a, b, c] = clicks;
+      clicks = []; targets = [];
+      perform(action, a, b, c);
+    }
+
+    function record(player, text) {
+      history.push({ text: `${turnNumber}${player === "White" ? "." : "…"} ${text}` });
+      if (player === "Black") turnNumber++;
+    }
+
+    function perform(kind, a, b, c) {
+      const player = view.turn;
+      let r, rec, done;
+      if (kind === "move") {
+        r = call(B.move(a, b)); rec = `Move ${a}→${b}`; done = `${player} moved ${a}→${b}.`;
+      } else if (kind === "split") {
+        r = call(B.split(a, b, c)); rec = `Split ${a}→${b} | ${c}`; done = `${player} split ${a}→${b} | ${c}.`;
+      } else if (kind === "merge") {
+        r = call(B.merge(a, b, c)); rec = `Merge ${a} + ${b} → ${c}`; done = `${player} merged ${a} + ${b} → ${c}.`;
+      } else if (kind === "measure") {
+        r = call(B.measure(a)); rec = `Measure ${a}: ${(r.outcome || "").toLowerCase()}`;
+        done = `Measured ${a}: ${r.outcome}. Every branch that disagreed is gone.`;
+      } else if (kind === "phase") {
+        r = call(B.phase(a));
+        if (r.ok) {
+          history.push({ text: `(${player} flips phase on ${a})`, sub: true });
+          action = mainAction;
+        }
+        done = `Phase flipped on ${a}. Now make your main action (${BY_KEY[mainAction].label} is selected).`;
+      }
+
+      if (!r.ok) {
+        setMessage(r.error, "error");
+      } else {
+        if (kind !== "phase") record(player, rec);
+        const notes = r.notes || [];
+        setMessage([done, ...notes].join("\n"), notes.length ? "note" : "good");
+        if (r.mate) {
+          const p = pct(r.mate.probability);
+          if (r.mate.mate) {
+            history.push({ text: `Mate measured (${p}): ${r.mate.winner} wins`, sub: true });
+            setMessage(`Checkmate! The king was lost in ${p} of the branches and the measurement landed there. ${r.mate.winner} wins.`, "good");
+          } else {
+            history.push({ text: `Mate measured (${p}): escaped`, sub: true });
+            setMessage(`Checkmate existed in ${p} of the branches. The measurement said no: those branches vanished and play continues.`, "note");
+          }
+        }
+      }
+      refresh();
+    }
+
+    function newGame() {
+      if (!B) return;
+      B.new_game();
+      action = mainAction = "move";
+      clicks = []; targets = []; inspectedPid = null; inspectedSquare = null; history = []; turnNumber = 1;
+      setMessage("New game. White to move.", "note");
+      refresh();
+    }
+
+    // ── Wiring ──────────────────────────────────────────────────────────────
+    const RULES = `<div class="rules">
+      <p><b>Turn.</b> Each turn is one main action (Move, Split, Merge or Measure) plus an optional free Phase shift beforehand.</p>
+      <p><b>Branches.</b> The board is a superposition of ordinary chess positions. Every action is played in each branch separately. Where it's impossible (the piece isn't there, a superposed piece blocks the path, your king is in check…) that branch simply passes.</p>
+      <p><b>Move.</b> An ordinary move. Capturing a half-present piece captures it only in the branches where it's there. Pawns promote to queens automatically.</p>
+      <p><b>Split.</b> Move a piece to two squares at once, 50/50. Each leg must be a legal move (captures allowed).</p>
+      <p><b>Merge.</b> Recombine two halves of the same piece onto an empty square both can reach. Halves with the same phase interfere constructively and the piece lands on the target. If one half's phase was flipped they interfere destructively, and the whole piece lands on the first half you clicked instead.</p>
+      <p><b>Phase (free, once per turn).</b> Multiply one of your superposed pieces' amplitude by −1 (shown as “−” on its badge). Phase is invisible to measurement and only matters when you merge.</p>
+      <p><b>Measure (uses your turn).</b> Ask “what is on this square?” The state collapses to the branches that agree.</p>
+      <p><b>Check &amp; checkmate.</b> Check can be partial (“quantum check 50%”). Ignore it and your king can be captured in those branches. Whenever the side to move is checkmated in some branches, the game measures just that question: either it's mate and the game ends, or those branches vanish and play continues.</p>
+      <p><b>Inspector.</b> Piece: where a piece may be, and which pieces it's entangled with. Square: the state of one square as a ket. State: the whole superposition |ψ⟩ with every branch's amplitude. Pieces: everything in superposition or at risk of capture.</p>
+      <p><b>Limit.</b> The browser version caps the superposition at 4,096 positions, where an action takes about a second. Measure or merge to shrink it.</p>
+    </div>`;
+
+    buildBoard();
+    renderToolbar();
+    $("toolbar").addEventListener("click", e => {
+      const btn = e.target.closest(".tool");
+      if (btn && !btn.disabled) setAction(btn.dataset.action);
+    });
+    $("tabs").addEventListener("click", e => {
+      const t = e.target.closest(".tab");
+      if (t) { tab = t.dataset.tab; if (view) renderPanel(); }
+    });
+    $("panel").addEventListener("click", e => {
+      const p = e.target.closest("[data-pid]");
+      if (p) { inspectedPid = p.dataset.pid; tab = "piece"; refresh(); }
+    });
+    $("newGame").addEventListener("click", newGame);
+    $("cancel").addEventListener("click", () => { clicks = []; targets = []; if (view) render(); });
+    document.addEventListener("keydown", e => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "Escape") { clicks = []; targets = []; if (view) render(); return; }
+      const a = ACTIONS.find(x => x.kbd === e.key.toLowerCase());
+      if (a) {
+        const btn = document.querySelector(`.tool[data-action="${a.key}"]`);
+        if (btn && !btn.disabled) setAction(a.key);
+      }
+    });
+    boot();
+  </script>
+  <script data-goatcounter="https://johnalexborkowski.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
