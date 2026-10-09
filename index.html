@@ -9,6 +9,11 @@
   <meta property="og:description" content="Computer Science & Mathematics, UT Austin. Quantitative trading and software engineering.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://johnalexborkowski.com">
+  <meta property="og:image" content="https://johnalexborkowski.com/img/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="John Alexandre Borkowski — CS & Mathematics, UT Austin">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://johnalexborkowski.com/">
   <script type="application/ld+json">
   {
@@ -16,6 +21,7 @@
     "@type": "Person",
     "name": "John Alexandre Borkowski",
     "url": "https://johnalexborkowski.com",
+    "image": "https://johnalexborkowski.com/img/headshot.jpg",
     "jobTitle": "Quantitative Developer",
     "address": { "@type": "PostalAddress", "addressLocality": "Austin", "addressRegion": "TX" },
     "alumniOf": { "@type": "CollegeOrUniversity", "name": "The University of Texas at Austin" },
@@ -119,7 +125,15 @@
     .item li { margin-bottom: 6px; }
     .item li::marker { color: var(--faint); }
     .item p { margin: 0; color: var(--muted); }
+    .item p strong { color: var(--text); font-weight: 600; }
+    .item code { font: 13px var(--mono); background: var(--accent-soft); color: var(--accent); padding: 1px 5px; border-radius: 4px; }
 
+    .avatar {
+      display: block; width: 104px; height: 104px; border-radius: 50%;
+      object-fit: cover; margin-bottom: 28px;
+      border: 1px solid var(--line); background: var(--surface);
+    }
+    .code-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 14px; font-weight: 500; }
     .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
     .tag {
       font: 12px/1 var(--mono); padding: 5px 8px; border-radius: 5px;
@@ -160,18 +174,22 @@
 
   <main class="wrap">
     <header class="hero">
+      <img class="avatar" src="img/headshot.jpg" alt="John Alexandre Borkowski" width="104" height="104">
       <div class="eyebrow">Austin, TX</div>
       <h1>John Alexandre Borkowski</h1>
       <p class="lede">
-        Computer Science &amp; Mathematics at UT Austin. I build quantitative models and the software
-        that runs them, most recently on the Quantitative Trading desk at Goldman Sachs.
+        I like understanding how things actually work, whether that's how an equity gets priced, how a
+        quantum state collapses, or the forces of nature that shape a breaking wave. Most of what's on
+        this page started as a tool I wanted for myself. Outside of work you'll usually find me in the
+        water or above it (surfing, foiling, paragliding, freediving, scuba) or on a mountain
+        snowboarding, rock climbing, hiking and mountain biking.
       </p>
       <div class="links">
         <a class="btn primary" href="resume.pdf" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
           Resume
         </a>
-        <a class="btn" href="mailto:johnborkowski@utexas.edu">
+        <a class="btn" href="mailto:johnalex1021@gmail.com">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
           Email
         </a>
@@ -230,11 +248,42 @@
       <h2>Projects</h2>
 
       <div class="item">
+        <div class="when">2026</div>
+        <div>
+          <h3>daylog</h3>
+          <p>A personal Telegram bot I use every day. Voice notes are transcribed locally and turned into structured, place-linked journal entries by Claude, with an assistant on top that plans and reviews against my goals. No database: plain Markdown and YAML in a private, git-backed vault, deployed on Railway.</p>
+          <div class="tags"><span class="tag">Python</span><span class="tag">LLMs</span><span class="tag">Whisper</span><span class="tag">Telegram</span><span class="tag">Railway</span></div>
+          <div class="code-links"><a href="https://github.com/IDES0/daylog" target="_blank" rel="noopener">Code →</a></div>
+        </div>
+      </div>
+
+      <div class="item">
         <div class="when">Dec 2025</div>
         <div>
           <h3>Quantum Chess Engine</h3>
           <p>A chess engine where pieces can enter superposition and become entangled, built on a hand-written complex-vector state space and a custom linear algebra library for unitary transformations and measurement collapse.</p>
           <div class="tags"><span class="tag">Linear Algebra</span><span class="tag">Quantum Computing</span><span class="tag">Game Engine</span></div>
+          <div class="code-links"><a href="https://github.com/IDES0/QuantumChess" target="_blank" rel="noopener">Code →</a></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="when">Jul 2025</div>
+        <div>
+          <h3>Market Regime Research</h3>
+          <p>An exploratory notebook classifying market regimes (risk-on, risk-off, transition) with Gaussian Mixture Models over FRED macro indicators and a Black-Scholes-derived volatility feature.</p>
+          <div class="tags"><span class="tag">Python</span><span class="tag">scikit-learn</span><span class="tag">Jupyter</span></div>
+          <div class="code-links"><a href="https://github.com/IDES0/Regime-Research" target="_blank" rel="noopener">Code →</a></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="when">2025</div>
+        <div>
+          <h3>Tools</h3>
+          <p><strong>StockCLI</strong>: a terminal command (<code>stk NVDA</code>) for quotes, ASCII price charts and financial metrics. <strong>.dotfiles</strong>: my macOS setup, with Aerospace tiling, a Lua SketchyBar status bar wired into workspaces, WezTerm and Neovim.</p>
+          <div class="tags"><span class="tag">Python</span><span class="tag">Lua</span><span class="tag">macOS</span></div>
+          <div class="code-links"><a href="https://github.com/IDES0/StockCLI" target="_blank" rel="noopener">StockCLI →</a><a href="https://github.com/IDES0/.dotfiles" target="_blank" rel="noopener">.dotfiles →</a></div>
         </div>
       </div>
 
@@ -244,6 +293,7 @@
           <h3>FinDB</h3>
           <p>A stock trading web app with real-time market data, portfolio management, trade execution, and a volatility screener pricing market-implied vols via Bjerksund-Stensland.</p>
           <div class="tags"><span class="tag">Python</span><span class="tag">Django</span><span class="tag">SQL</span><span class="tag">Options Pricing</span></div>
+          <div class="code-links"><a href="https://github.com/IDES0/FinDB-Core" target="_blank" rel="noopener">Code: core →</a><a href="https://github.com/IDES0/FinDB-Live" target="_blank" rel="noopener">Code: live data →</a></div>
         </div>
       </div>
 
@@ -287,9 +337,11 @@
   <footer>
     <div class="wrap">
       <span>© 2026 John Alexandre Borkowski</span>
-      <a href="mailto:johnborkowski@utexas.edu">johnborkowski@utexas.edu</a>
+      <a href="mailto:johnalex1021@gmail.com">johnalex1021@gmail.com</a>
     </div>
   </footer>
 
+  <script data-goatcounter="https://johnalexborkowski.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
