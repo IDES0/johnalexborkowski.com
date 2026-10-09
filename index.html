@@ -134,7 +134,8 @@
     footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 
     @media (max-width: 640px) {
-      nav ul { display: none; }
+      nav ul { gap: 16px; }
+      nav ul li.hide-sm { display: none; }
       header.hero { padding: 56px 0 40px; }
       .item, .skills { grid-template-columns: 1fr; gap: 4px; }
       .skills dd { margin-bottom: 12px; }
@@ -150,8 +151,8 @@
       <ul>
         <li><a href="#experience">Experience</a></li>
         <li><a href="#projects">Projects</a></li>
-        <li><a href="#skills">Skills</a></li>
-        <li><a href="#education">Education</a></li>
+        <li class="hide-sm"><a href="#skills">Skills</a></li>
+        <li class="hide-sm"><a href="#education">Education</a></li>
         <li><a href="travel.html">Travel</a></li>
       </ul>
     </div>
