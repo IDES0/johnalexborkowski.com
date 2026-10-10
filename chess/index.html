@@ -205,6 +205,7 @@
       .sq .ring { border-width: 3px; }
     }
   </style>
+  <script src="../analytics.js"></script>
 </head>
 <body>
 
@@ -326,6 +327,7 @@
     // ── Python ──────────────────────────────────────────────────────────────
     async function boot() {
       const step = t => $("loadingText").textContent = t;
+      const t0 = performance.now();
       try {
         step("Downloading Python (Pyodide)…");
         const py = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.29.5/full/" });
@@ -342,6 +344,7 @@
         py.runPython("import sys; sys.path.insert(0, '/home/pyodide')");
         B = py.pyimport("bridge");
         $("loading").remove();
+        window.posthog?.capture("chess_engine_loaded", { seconds: Math.round((performance.now() - t0) / 100) / 10 });
         refresh();
         setMessage("White to move. Pick an action above, then click the board.", "note");
       } catch (err) {
@@ -617,6 +620,7 @@
         setMessage(r.error, "error");
       } else {
         if (kind !== "phase") record(player, rec);
+        window.posthog?.capture("chess_action", { kind, branches_before: view.branches });
         const notes = r.notes || [];
         setMessage([done, ...notes].join("\n"), notes.length ? "note" : "good");
         if (r.mate) {
@@ -636,6 +640,7 @@
     function newGame() {
       if (!B) return;
       B.new_game();
+      window.posthog?.capture("chess_new_game");
       action = mainAction = "move";
       clicks = []; targets = []; inspectedPid = null; inspectedSquare = null; history = []; turnNumber = 1;
       setMessage("New game. White to move.", "note");
@@ -683,7 +688,5 @@
     });
     boot();
   </script>
-  <script data-goatcounter="https://johnalexborkowski.goatcounter.com/count"
-          async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>

@@ -141,6 +141,7 @@
       .stage { aspect-ratio: 4 / 3; min-height: 200px; }
     }
   </style>
+  <script src="../analytics.js"></script>
 </head>
 <body>
 
@@ -546,6 +547,7 @@
       try {
         const v = await make();
         useVolume(v, label);
+        window.posthog?.capture("spacetime_source", { source: id, frames: v.T, width: v.W });
       } catch (err) {
         loading = false;
         console.error(err);
@@ -583,6 +585,7 @@
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 5000);
         message(`Exported ${n} frames (${(blob.size / 1048576).toFixed(1)} MB).`);
+        window.posthog?.capture("spacetime_export", { view, frames: n });
       } catch (err) {
         console.error(err);
         message("Couldn't export the GIF: " + (err.message || err), true);
@@ -637,7 +640,5 @@
     // Start on the El Salvador clip so the page shows something straight away.
     $("exSalvador").click();
   </script>
-  <script data-goatcounter="https://johnalexborkowski.goatcounter.com/count"
-          async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
