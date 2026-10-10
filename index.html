@@ -133,6 +133,21 @@
       object-fit: cover; margin-bottom: 28px;
       border: 1px solid var(--line); background: var(--surface);
     }
+    .featured { padding: 36px 0 48px; }
+    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .feature-card {
+      display: flex; flex-direction: column; overflow: hidden; color: var(--text);
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+      transition: border-color .15s, transform .15s, box-shadow .15s;
+    }
+    .feature-card:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.12); }
+    .feature-card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; background: var(--line); }
+    .feature-body { padding: 14px 16px 16px; display: flex; flex-direction: column; flex: 1; }
+    .feature-body h3 { font-size: 17px; font-weight: 600; margin: 0 0 6px; }
+    .feature-body p { font-size: 14.5px; color: var(--muted); margin: 0 0 12px; line-height: 1.55; }
+    .feature-cta { margin-top: auto; font-weight: 600; font-size: 14px; color: var(--accent); }
+    .code-links a.try { background: var(--accent); color: var(--bg); padding: 4px 10px; border-radius: 6px; }
+    .code-links a.try:hover { text-decoration: none; opacity: .9; }
     .code-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 14px; font-weight: 500; }
     .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
     .tag {
@@ -148,6 +163,7 @@
     footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 
     @media (max-width: 640px) {
+      .feature-grid { grid-template-columns: 1fr; }
       nav ul { gap: 16px; }
       nav ul li.hide-sm { display: none; }
       header.hero { padding: 56px 0 40px; }
@@ -164,10 +180,10 @@
     <div class="wrap">
       <a class="mark" href="#">JB</a>
       <ul>
-        <li><a href="#experience">Experience</a></li>
-        <li><a href="#projects">Projects</a></li>
-        <li class="hide-sm"><a href="#skills">Skills</a></li>
-        <li class="hide-sm"><a href="#education">Education</a></li>
+        <li class="hide-sm"><a href="#experience">Experience</a></li>
+        <li class="hide-sm"><a href="#projects">Projects</a></li>
+        <li><a href="chess/">Chess</a></li>
+        <li><a href="spacetime/">Spacetime</a></li>
         <li><a href="travel.html">Travel</a></li>
       </ul>
     </div>
@@ -204,6 +220,28 @@
         </a>
       </div>
     </header>
+
+    <section class="featured" aria-label="Try in your browser">
+      <h2>Try in your browser</h2>
+      <div class="feature-grid">
+        <a class="feature-card" href="chess/">
+          <img src="img/feat-chess.jpg?v=2" alt="A quantum chess board with knights and queens split across squares, each showing its probability, above the full quantum state of the board written as a ket" width="960" height="600" loading="lazy">
+          <div class="feature-body">
+            <h3>Quantum Chess</h3>
+            <p>Split pieces into superposition, interfere them back together, collapse them by measuring. My Python engine, running in your browser.</p>
+            <span class="feature-cta">Play →</span>
+          </div>
+        </a>
+        <a class="feature-card" href="spacetime/">
+          <img src="img/feat-spacetime.jpg" alt="A drone shot of a surfer on a wave, next to the same video sliced through time into a curtain of streaks" width="960" height="600" loading="lazy">
+          <div class="feature-body">
+            <h3>Slice a video through time</h3>
+            <p>Treat a clip as a block of (x, y, time) and cut it along another axis. Try it on my surfing, any video, or your camera.</p>
+            <span class="feature-cta">Try it →</span>
+          </div>
+        </a>
+      </div>
+    </section>
 
     <section id="experience">
       <h2>Experience</h2>
@@ -264,7 +302,7 @@
           <h3>Quantum Chess Engine</h3>
           <p>A chess engine where pieces can enter superposition and become entangled, built on a hand-written complex-vector state space and a custom linear algebra library for unitary transformations and measurement collapse.</p>
           <div class="tags"><span class="tag">Linear Algebra</span><span class="tag">Quantum Computing</span><span class="tag">Game Engine</span></div>
-          <div class="code-links"><a href="chess/">Play in your browser →</a><a href="https://github.com/IDES0/QuantumChess" target="_blank" rel="noopener">Code →</a></div>
+          <div class="code-links"><a class="try" href="chess/">Play in your browser →</a><a href="https://github.com/IDES0/QuantumChess" target="_blank" rel="noopener">Code →</a></div>
         </div>
       </div>
 
@@ -284,7 +322,7 @@
           <h3>Temporal-Spatial Transposition</h3>
           <p>Treats a video as a block of pixels in (x, y, time) and slices it along a different axis, so time becomes a spatial dimension and motion turns into shape. A Python tool loads any video or GIF, lets you choose the slicing axis and frame rate, and exports the result. A companion notebook builds the intuition with a helix moving through space-time.</p>
           <div class="tags"><span class="tag">Python</span><span class="tag">NumPy</span><span class="tag">OpenCV</span><span class="tag">Matplotlib</span></div>
-          <div class="code-links"><a href="spacetime/">Try it in your browser →</a><a href="https://github.com/IDES0/Temporal-Spatial-Transposition" target="_blank" rel="noopener">Code →</a></div>
+          <div class="code-links"><a class="try" href="spacetime/">Try it in your browser →</a><a href="https://github.com/IDES0/Temporal-Spatial-Transposition" target="_blank" rel="noopener">Code →</a></div>
         </div>
       </div>
 
